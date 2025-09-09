@@ -25,13 +25,25 @@ def upgrade() -> None:
     if use_pgvector:  # pragma: no branch
         op.execute("CREATE EXTENSION IF NOT EXISTS vector")
 
-    id_col = sa.Column(
-        "id",
-        sa.String(length=36),
-        primary_key=True,
-        nullable=False,
-        server_default=sa.text("gen_random_uuid()")  # requires pgcrypto; or replace with uuid_generate_v4()
-    )
+    if use_pgvector:
+        # Use native UUID type with default in Postgres
+        id_col = sa.Column(
+            "id",
+            pg.UUID(as_uuid=False),
+            primary_key=True,
+            nullable=False,
+            server_default=sa.text("gen_random_uuid()")
+        )
+        # Ensure pgcrypto for gen_random_uuid
+        op.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")
+    else:
+        # Fallback: string id without server default (app-level generation)
+        id_col = sa.Column(
+            "id",
+            sa.String(length=36),
+            primary_key=True,
+            nullable=False,
+        )
     embedding_col = sa.Column(
         "embedding",
         Vector(1536) if use_pgvector else sa.JSON(),
