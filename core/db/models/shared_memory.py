@@ -24,21 +24,15 @@ def _dialect_name() -> str:
         return ""
 
 
-_DIALECT = _dialect_name()
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 
-if _DIALECT == "postgresql":  # pragma: no cover - depends on runtime engine
-    _ID_TYPE = PG_UUID(as_uuid=True)
-    _ID_DEFAULT = uuid4
-else:
-    _ID_TYPE = String(36)
-    _ID_DEFAULT = lambda: str(uuid4())
+# Always use string UUIDs at ORM level to avoid premature dialect binding issues.
+_ID_TYPE = String(36)
+_ID_DEFAULT = lambda: str(uuid4())
 
-if PGVector is not None and _DIALECT == "postgresql":  # pragma: no cover
-    Vector = PGVector  # export for callers
-    _EMBEDDING_TYPE = PGVector(1536)
-else:
-    Vector = None  # type: ignore
-    _EMBEDDING_TYPE = JSON
+# Store embeddings in JSON at ORM level; pgvector specifics handled in migrations.
+Vector = None  # type: ignore
+_EMBEDDING_TYPE = JSON
 
 
 class SharedMemory(Base):
