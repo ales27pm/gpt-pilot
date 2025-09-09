@@ -2,7 +2,11 @@ import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+import requests
+
 from core.git.github import (
+    _get_repo_owner_and_name,
     clone_repository,
     commit_all,
     create_pull_request,
@@ -15,8 +19,9 @@ def test_clone_repository():
     with patch("subprocess.run") as run:
         clone_repository("https://example.com/repo.git", "/tmp/repo", branch="main")
         run.assert_called_with(
-            ["git", "clone", "https://example.com/repo.git", "/tmp/repo", "-b", "main"],
+            ["git", "clone", "-b", "main", "https://example.com/repo.git", "/tmp/repo"],
             check=True,
+            shell=False,
         )
 
 
@@ -38,8 +43,10 @@ def test_set_pre_commit_hook(tmp_path: Path):
 
 
 def test_create_pull_request():
-    with patch("subprocess.run") as run, patch("requests.post") as post:
-        run.return_value = MagicMock(stdout="https://github.com/owner/repo.git\n")
+    with (
+        patch("core.git.github._get_repo_owner_and_name", return_value=("owner", "repo")),
+        patch("requests.post") as post,
+    ):
         response = MagicMock()
         response.json.return_value = {"url": "https://api.github.com/repos/owner/repo/pulls/1"}
         response.raise_for_status.return_value = None
@@ -55,6 +62,48 @@ def test_create_pull_request():
         post.assert_called_with(
             "https://api.github.com/repos/owner/repo/pulls",
             json={"title": "T", "body": "B", "head": "feature", "base": "main"},
-            headers={"Authorization": "token abc"},
+            headers={"Authorization": "Bearer abc"},
             timeout=10,
         )
+
+
+@pytest.mark.parametrize("token", [None, ""])
+def test_create_pull_request_missing_or_invalid_token(token):
+    with (
+        patch("core.git.github._get_repo_owner_and_name", return_value=("owner", "repo")),
+        patch("requests.post") as post,
+    ):
+        response = MagicMock()
+        response.raise_for_status.side_effect = requests.HTTPError("401 Unauthorized")
+        post.return_value = response
+        with pytest.raises(requests.HTTPError):
+            create_pull_request(
+                "/tmp/repo",
+                branch="feature",
+                title="T",
+                body="B",
+                token=token,
+            )
+        post.assert_called_with(
+            "https://api.github.com/repos/owner/repo/pulls",
+            json={"title": "T", "body": "B", "head": "feature", "base": "main"},
+            headers={},
+            timeout=10,
+        )
+
+
+def test_get_repo_owner_and_name(tmp_path: Path):
+    git_dir = tmp_path / ".git"
+    git_dir.mkdir()
+    config = git_dir / "config"
+    config.write_text('[remote "origin"]\n    url = git@github.com:owner/repo.git\n')
+    assert _get_repo_owner_and_name(str(tmp_path)) == ("owner", "repo")
+
+
+def test_get_repo_owner_and_name_invalid(tmp_path: Path):
+    git_dir = tmp_path / ".git"
+    git_dir.mkdir()
+    config = git_dir / "config"
+    config.write_text('[remote "origin"]\n    url = https://example.com/owner/repo.git\n')
+    with pytest.raises(ValueError):
+        _get_repo_owner_and_name(str(tmp_path))
