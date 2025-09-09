@@ -47,14 +47,6 @@ def upgrade() -> None:
             "vector_dims(embedding) = 1536",
         )
 
-    op.create_table(
-        "shared_memory",
-        id_col,
-        sa.Column("agent_type", sa.String(length=50), nullable=False),
-        sa.Column("content", sa.Text(), nullable=False),
-        embedding_col,
-    )
-
 
 def downgrade() -> None:
     bind = op.get_bind()
