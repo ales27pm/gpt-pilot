@@ -13,10 +13,11 @@
   </header>
   <main class="container">
     <form id="create-form" class="create">
-      <input id="new-name" type="text" placeholder="New project name" />
+      <label for="new-name" class="visually-hidden">Project name</label>
+      <input id="new-name" type="text" placeholder="New project name" required />
       <button type="submit">Create</button>
     </form>
-    <p id="message" class="message hidden"></p>
+    <p id="message" class="message hidden" aria-live="polite"></p>
     <ul id="projects" class="project-list"></ul>
   </main>
   <script src="/static/app.js"></script>
