@@ -94,7 +94,7 @@ class Orchestrator(BaseAgent, GitMixin):
                 for single_agent, single_response in zip(agent, responses):
                     await self.message_broker.publish(
                         "agent.finish",
-                        {"agent": single_agent.agent_type, "response": single_response},
+                        {"agent": single_agent.agent_type, "status": single_response.type.value if single_response else "unknown"},
                     )
                 response = self.handle_parallel_responses(agent[0], responses)
 
