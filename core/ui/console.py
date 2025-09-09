@@ -1,4 +1,5 @@
 from typing import Optional
+import inspect
 
 from prompt_toolkit.shortcuts import PromptSession
 
@@ -120,15 +121,13 @@ class PlainConsoleUI(UIBase):
 
         session = PromptSession("> ")
 
+        prompt_kwargs = {"default": initial_text or ""}
+        if "placeholder" in inspect.signature(session.prompt_async).parameters:
+            prompt_kwargs["placeholder"] = placeholder
+
         while True:
             try:
-                try:
-                    choice = await session.prompt_async(
-                        default=initial_text or "",
-                        placeholder=placeholder,
-                    )
-                except TypeError:
-                    choice = await session.prompt_async(default=initial_text or "")
+                choice = await session.prompt_async(**prompt_kwargs)
                 choice = choice.strip()
             except KeyboardInterrupt:
                 raise UIClosedError()
@@ -137,11 +136,13 @@ class PlainConsoleUI(UIBase):
             if buttons and choice in buttons:
                 return UserInput(button=choice, text=None)
             if buttons_only:
-                print("Please choose one of available options")
+                if verbose:
+                    print("Please choose one of available options")
                 continue
             if choice or allow_empty:
                 return UserInput(button=None, text=choice)
-            print("Please provide a valid input")
+            if verbose:
+                print("Please provide a valid input")
 
     async def send_project_stage(self, data: dict):
         pass
