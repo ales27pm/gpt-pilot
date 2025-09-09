@@ -23,13 +23,16 @@ class OllamaClient(BaseLLMClient):
     provider = LLMProvider.OLLAMA
 
     def _init_client(self) -> None:
-        timeout = httpx.Timeout(
-            connect=self.config.connect_timeout,
-            read=self.config.read_timeout,
-        )
+        """Initialize the Ollama AsyncClient.
+
+        Older versions of ``ollama`` only accept primitive timeout values on the
+        client. Passing an ``httpx.Timeout`` instance can raise ``TypeError`` at
+        runtime, so we avoid setting timeouts here and instead specify them per
+        request for maximum compatibility.
+        """
+
         self.client = AsyncClient(
             host=self.config.base_url or "http://localhost:11434",
-            timeout=timeout,
         )
 
     async def _make_request(
@@ -46,13 +49,25 @@ class OllamaClient(BaseLLMClient):
 
         response_chunks: list[str] = []
         try:
-            stream = await self.client.chat(
-                model=self.config.model,
-                messages=convo.messages,
-                stream=True,
-                options={"temperature": (self.config.temperature if temperature is None else temperature)},
-                **kwargs,
-            )
+            request_timeout = self.config.read_timeout
+            try:
+                stream = await self.client.chat(
+                    model=self.config.model,
+                    messages=convo.messages,
+                    stream=True,
+                    options={"temperature": (self.config.temperature if temperature is None else temperature)},
+                    timeout=request_timeout,
+                    **kwargs,
+                )
+            except TypeError:  # pragma: no cover - older ollama versions
+                # ``timeout`` is not supported; retry without it.
+                stream = await self.client.chat(
+                    model=self.config.model,
+                    messages=convo.messages,
+                    stream=True,
+                    options={"temperature": (self.config.temperature if temperature is None else temperature)},
+                    **kwargs,
+                )
 
             async for chunk in stream:
                 message = chunk.get("message", {})
