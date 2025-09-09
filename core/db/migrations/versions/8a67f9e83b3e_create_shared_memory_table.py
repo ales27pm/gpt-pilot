@@ -26,7 +26,11 @@ def upgrade() -> None:
         op.execute("CREATE EXTENSION IF NOT EXISTS vector")
 
     id_col = sa.Column(
-        "id", sa.String(length=36), primary_key=True, nullable=False
+        "id",
+        sa.String(length=36),
+        primary_key=True,
+        nullable=False,
+        server_default=sa.text("gen_random_uuid()")  # requires pgcrypto; or replace with uuid_generate_v4()
     )
     embedding_col = sa.Column(
         "embedding",
