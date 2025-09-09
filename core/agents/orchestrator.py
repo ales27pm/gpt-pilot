@@ -25,6 +25,7 @@ from core.agents.troubleshooter import Troubleshooter
 from core.agents.web_search import WebSearch
 from core.db.models.project_state import IterationStatus, TaskStatus
 from core.log import get_logger
+from core.messaging import MessageBroker
 from core.telemetry import telemetry
 
 log = get_logger(__name__)
@@ -52,6 +53,7 @@ class Orchestrator(BaseAgent, GitMixin):
 
         log.info(f"Starting {__name__}.Orchestrator")
 
+        self.message_broker = MessageBroker()
         self.executor = Executor(self.state_manager, self.ui)
         self.process_manager = self.executor.process_manager
         # self.chat = Chat() TODO
@@ -72,14 +74,28 @@ class Orchestrator(BaseAgent, GitMixin):
 
             agent = self.create_agent(response)
 
+            # Attach message broker to the agent(s).
+            if isinstance(agent, list):
+                for a in agent:
+                    a.message_broker = self.message_broker
+            else:
+                agent.message_broker = self.message_broker
+
             # In case where agent is a list, run all agents in parallel.
             # Only one agent type can be run in parallel at a time (for now). See handle_parallel_responses().
             if isinstance(agent, list):
+                for single_agent in agent:
+                    await self.message_broker.publish("agent.start", single_agent.agent_type)
                 tasks = [single_agent.run() for single_agent in agent]
                 log.debug(
                     f"Running agents {[a.__class__.__name__ for a in agent]} (step {self.current_state.step_index})"
                 )
                 responses = await asyncio.gather(*tasks)
+                for single_agent, single_response in zip(agent, responses):
+                    await self.message_broker.publish(
+                        "agent.finish",
+                        {"agent": single_agent.agent_type, "status": single_response.type.value if single_response else "unknown"},
+                    )
                 response = self.handle_parallel_responses(agent[0], responses)
 
                 should_update_knowledge_base = any(
@@ -103,8 +119,10 @@ class Orchestrator(BaseAgent, GitMixin):
                     await self.state_manager.update_implemented_pages_and_apis()
 
             else:
+                await self.message_broker.publish("agent.start", agent.agent_type)
                 log.debug(f"Running agent {agent.__class__.__name__} (step {self.current_state.step_index})")
                 response = await agent.run()
+                await self.message_broker.publish("agent.finish", {"agent": agent.agent_type, "response": response})
 
             if response.type == ResponseType.EXIT:
                 log.debug(f"Agent {agent.__class__.__name__} requested exit")

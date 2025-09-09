@@ -1,4 +1,4 @@
-from typing import Any, Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 from core.agents.response import AgentResponse
 from core.config import get_config
@@ -8,6 +8,9 @@ from core.log import get_logger
 from core.proc.process_manager import ProcessManager
 from core.state.state_manager import StateManager
 from core.ui.base import AgentSource, UIBase, UserInput, pythagora_source
+
+if TYPE_CHECKING:  # pragma: no cover - only for type checkers
+    from core.messaging import MessageBroker
 
 log = get_logger(__name__)
 
@@ -43,6 +46,7 @@ class BaseAgent:
         self.data = data
         self.args = args
         self.memory = state_manager.shared_memory
+        self.message_broker: Optional["MessageBroker"] = None
 
     @property
     def current_state(self) -> ProjectState:
