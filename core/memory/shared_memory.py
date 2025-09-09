@@ -35,17 +35,16 @@ class SharedMemory:
             return record
 
     async def search(self, embedding: List[float], limit: int = 5) -> List[SharedMemoryModel]:
-        if not self.enabled:
-            raise RuntimeError("pgvector is not available")
-        if len(embedding) != self.embedding_dim:
-            raise ValueError(
-                f"Input embedding length {len(embedding)} does not match expected length {self.embedding_dim}"
+        self._validate_embedding(embedding)
+        if Vector is not None:
+            stmt = (
+                select(SharedMemoryModel)
+                .order_by(SharedMemoryModel.embedding.cosine_distance(embedding))
+                .limit(limit)
             )
-        stmt = (
-            select(SharedMemoryModel)
-            .order_by(SharedMemoryModel.embedding.cosine_distance(embedding))
-            .limit(limit)
-        )
+        else:
+            # Fallback: no vector ops available, return recent entries
+            stmt = select(SharedMemoryModel).order_by(SharedMemoryModel.id.desc()).limit(limit)
         async with self.session_manager as session:
             result = await session.execute(stmt)
             return list(result.scalars())
