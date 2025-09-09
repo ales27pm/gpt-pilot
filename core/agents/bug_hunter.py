@@ -76,6 +76,7 @@ class BugHunter(ChatWithBreakdownMixin, BaseAgent):
                 user_feedback=self.current_state.current_iteration["user_feedback"],
                 user_feedback_qa=self.current_state.current_iteration["user_feedback_qa"],
                 docs=self.current_state.docs,
+                web=self.current_state.web,
                 next_solution_to_try=None,
             )
             .require_schema(TestSteps)
@@ -323,6 +324,7 @@ class BugHunter(ChatWithBreakdownMixin, BaseAgent):
             user_feedback=self.current_state.current_iteration["user_feedback"],
             user_feedback_qa=self.current_state.current_iteration["user_feedback_qa"],
             docs=self.current_state.docs,
+            web=self.current_state.web,
             magic_words=magic_words,
             next_solution_to_try=None,
             test_instructions=json.loads(self.current_state.current_task.get("test_instructions") or "[]"),

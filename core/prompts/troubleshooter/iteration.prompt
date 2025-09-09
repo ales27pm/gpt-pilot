@@ -39,6 +39,7 @@ Focus on solving this issue in the following way:
 ```
 {% endif %}
 {% include "partials/doc_snippets.prompt" %}
+{% include "partials/web_results.prompt" %}
 Now, tell me how can we implement the changes that the user requested. Think step by step and explain each change you want to make and write code snippets that you want to change.
 
 **IMPORTANT**

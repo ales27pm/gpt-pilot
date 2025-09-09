@@ -101,6 +101,9 @@ class Developer(ChatWithBreakdownMixin, RelevantFilesMixin, BaseAgent):
             # if the task is actually being done.
             return AgentResponse.external_docs_required(self)
 
+        if self.current_state.web is None and self.current_state.specification.complexity != Complexity.SIMPLE:
+            return AgentResponse.web_search_required(self)
+
         return await self.breakdown_current_task()
 
     async def breakdown_current_iteration(self) -> AgentResponse:
@@ -157,6 +160,7 @@ class Developer(ChatWithBreakdownMixin, RelevantFilesMixin, BaseAgent):
                 user_feedback_qa=None,
                 next_solution_to_try=None,
                 docs=self.current_state.docs,
+                web=self.current_state.web,
                 test_instructions=json.loads(current_task.get("test_instructions") or "[]"),
             )
             .assistant(description)
@@ -226,6 +230,7 @@ class Developer(ChatWithBreakdownMixin, RelevantFilesMixin, BaseAgent):
             iteration=None,
             current_task_index=current_task_index,
             docs=self.current_state.docs,
+            web=self.current_state.web,
             related_api_endpoints=related_api_endpoints,
         )
         response: str = await llm(convo)

@@ -158,6 +158,8 @@ class Troubleshooter(ChatWithBreakdownMixin, IterationPromptMixin, RelevantFiles
                 task=task,
                 iteration=None,
                 current_task_index=current_task_index,
+                docs=self.current_state.docs,
+                web=self.current_state.web,
                 related_api_endpoints=task.get("related_api_endpoints", []),
             )
             .assistant(self.current_state.current_task["instructions"])

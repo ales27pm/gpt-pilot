@@ -32,6 +32,7 @@ sqlalchemy==2.0.32
 sqlalchemy[asyncio]==2.0.32
 tenacity==9.0.0
 tiktoken==0.8.0
+trafilatura==1.6.4
 tqdm==4.67.1
 typing-extensions==4.12.2
 urllib3==2.2.3

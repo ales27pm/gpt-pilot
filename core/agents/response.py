@@ -36,6 +36,9 @@ class ResponseType(str, Enum):
     EXTERNAL_DOCS_REQUIRED = "external-docs-required"
     """We need to fetch external docs for a task."""
 
+    WEB_SEARCH_REQUIRED = "web-search-required"
+    """We need to perform a web search for additional context."""
+
     UPDATE_SPECIFICATION = "update-specification"
     """We need to update the project specification."""
 
@@ -88,6 +91,10 @@ class AgentResponse:
     @staticmethod
     def external_docs_required(agent: "BaseAgent") -> "AgentResponse":
         return AgentResponse(type=ResponseType.EXTERNAL_DOCS_REQUIRED, agent=agent)
+
+    @staticmethod
+    def web_search_required(agent: "BaseAgent") -> "AgentResponse":
+        return AgentResponse(type=ResponseType.WEB_SEARCH_REQUIRED, agent=agent)
 
     @staticmethod
     def update_specification(agent: "BaseAgent", description: str) -> "AgentResponse":
