@@ -41,10 +41,13 @@ def upgrade() -> None:
         embedding_col,
     )
     if use_pgvector:  # pragma: no branch
-        op.create_check_constraint(
-            "ck_shared_memory_embedding_dims",
-            "shared_memory",
-            "vector_dims(embedding) = 1536",
+        # Ensure idempotency if migration is accidentally re-run
+        op.execute(
+            "DO $$ BEGIN "
+            "IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ck_shared_memory_embedding_dims') THEN "
+            "ALTER TABLE shared_memory ADD CONSTRAINT ck_shared_memory_embedding_dims CHECK (vector_dims(embedding) = 1536); "
+            "END IF; "
+            "END $$;"
         )
 
 
