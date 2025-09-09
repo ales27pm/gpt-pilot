@@ -62,7 +62,7 @@ def test_code_block_parser(input, expected):
 )
 def test_parse_json_no_spec(input, strict, expected):
     parser = JSONParser(strict=strict)
-    if expected == ValueError:
+    if expected is ValueError:
         with pytest.raises(ValueError):
             parser(input)
     else:

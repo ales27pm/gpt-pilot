@@ -46,10 +46,7 @@ class SharedMemory:
                 dialect = ""
             # Detect pgvector by attribute presence on the column expression
             embedding_col = SharedMemoryModel.embedding
-            if (
-                use_vector := hasattr(embedding_col, "cosine_distance")
-                and dialect == "postgresql"
-            ):
+            if hasattr(embedding_col, "cosine_distance") and dialect == "postgresql":
                 stmt = (
                     select(SharedMemoryModel)
                     .order_by(embedding_col.cosine_distance(embedding))

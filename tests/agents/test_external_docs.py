@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import HTTPError
@@ -6,18 +6,31 @@ from httpx import HTTPError
 from core.agents.external_docs import DocQueries, ExternalDocumentation, SelectedDocsets
 
 
-@pytest.mark.skip(reason="Temporary")
+@pytest.mark.asyncio
 async def test_stores_documentation_snippets_for_task(agentcontext):
     sm, _, ui, mock_llm = agentcontext
 
     sm.current_state.tasks = [{"description": "Some VueJS task", "status": "todo"}]
     await sm.commit()
 
-    ed = ExternalDocumentation(sm, ui)
-    ed.get_llm = mock_llm(
-        side_effect=[SelectedDocsets(docsets=["vuejs-api-ref"]), DocQueries(queries=["VueJS component model"])]
-    )
-    await ed.run()
+    with patch.object(
+        ExternalDocumentation,
+        "_get_available_docsets",
+        AsyncMock(return_value=[("vuejs-api-ref", "VueJS API Reference")]),
+    ), patch.object(
+        ExternalDocumentation,
+        "_fetch_snippets",
+        AsyncMock(return_value=[("vuejs-api-ref", ["snippet"])]),
+    ):
+        ed = ExternalDocumentation(sm, ui)
+        ed.get_llm = mock_llm(
+            side_effect=[
+                SelectedDocsets(docsets=["vuejs-api-ref"]),
+                DocQueries(queries=["VueJS component model"]),
+            ]
+        )
+        await ed.run()
+
     assert ed.next_state.docs[0]["key"] == "vuejs-api-ref"
 
 

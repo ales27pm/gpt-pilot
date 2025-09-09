@@ -1,5 +1,5 @@
-from typing import Optional
 import inspect
+from typing import Any, Optional
 
 from prompt_toolkit.shortcuts import PromptSession
 
@@ -119,15 +119,15 @@ class PlainConsoleUI(UIBase):
         if verbose:
             self._print_question(question, hint, buttons, default, source)
 
-        session = PromptSession("> ")
+        session: PromptSession[str] = PromptSession("> ")
 
-        prompt_kwargs = {"default": initial_text or ""}
+        prompt_kwargs: dict[str, Any] = {"default": initial_text or ""}
         if "placeholder" in inspect.signature(session.prompt_async).parameters:
             prompt_kwargs["placeholder"] = placeholder
 
         while True:
             try:
-                choice = await session.prompt_async(**prompt_kwargs)
+                choice = await session.prompt_async(**prompt_kwargs)  # type: ignore[call-arg]
                 choice = choice.strip()
             except KeyboardInterrupt:
                 raise UIClosedError()
@@ -144,14 +144,14 @@ class PlainConsoleUI(UIBase):
             if verbose:
                 print("Please provide a valid input")
 
-    async def send_project_stage(self, data: dict):
+    async def send_project_stage(self, data: dict[str, Any]) -> None:
         pass
 
     async def send_epics_and_tasks(
         self,
-        epics: list[dict],
-        tasks: list[dict],
-    ):
+        epics: list[dict[str, Any]] | None = None,
+        tasks: list[dict[str, Any]] | None = None,
+    ) -> None:
         pass
 
     async def send_task_progress(
@@ -162,29 +162,29 @@ class PlainConsoleUI(UIBase):
         source: str,
         status: str,
         source_index: int = 1,
-        tasks: list[dict] = None,
-    ):
+        tasks: list[dict[str, Any]] | None = None,
+    ) -> None:
         pass
 
     async def send_step_progress(
         self,
         index: int,
         n_steps: int,
-        step: dict,
+        step: dict[str, Any],
         task_source: str,
-    ):
+    ) -> None:
         pass
 
     async def send_modified_files(
         self,
-        modified_files: dict[str, str, str],
-    ):
+        modified_files: list[dict[str, Any]],
+    ) -> None:
         pass
 
     async def send_data_about_logs(
         self,
-        data_about_logs: dict,
-    ):
+        data_about_logs: dict[str, Any],
+    ) -> None:
         pass
 
     async def send_run_command(self, run_command: str):
