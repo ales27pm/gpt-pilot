@@ -1,0 +1,21 @@
+* { box-sizing: border-box; }
+body { font-family: Arial, sans-serif; margin: 0; }
+.top-bar { background: #333; color: #fff; padding: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.container { max-width: 800px; margin: 0 auto; padding: 1rem; }
+button { padding: 0.5rem 1rem; cursor: pointer; }
+.create { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+.create input { flex: 1; padding: 0.5rem; }
+.message { margin-bottom: 1rem; }
+.message.hidden { display: none; }
+.message.error { color: #b00020; }
+.message.success { color: #007700; }
+.project-list { list-style: none; padding: 0; margin: 0; }
+.project-list li { border: 1px solid #ccc; margin-bottom: 1rem; padding: 1rem; border-radius: 4px; }
+.project-header { display: flex; align-items: center; justify-content: space-between; }
+.project-header h2 { margin: 0; }
+.project-list .empty { text-align: center; color: #666; }
+@media (max-width: 600px) {
+  .top-bar { flex-direction: column; align-items: flex-start; }
+  .create { flex-direction: column; }
+  .create input, .create button { width: 100%; }
+}

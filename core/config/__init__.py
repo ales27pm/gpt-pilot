@@ -227,11 +227,12 @@ class DBConfig(_StrictModel):
 
     Supported URL schemes:
 
+    * postgresql+asyncpg: PostgreSQL database with optional pgvector extension
     * sqlite+aiosqlite: SQLite database using the aiosqlite driver
     """
 
     url: str = Field(
-        "sqlite+aiosqlite:///data/database/pythagora.db",
+        "postgresql+asyncpg://postgres:postgres@localhost:5432/gptpilot",
         description="Database connection URL",
     )
     debug_sql: bool = Field(False, description="Log all SQL queries to the console")

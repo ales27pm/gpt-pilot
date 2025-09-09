@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import List
 from uuid import uuid4
 
-import sqlalchemy as sa
 from sqlalchemy import JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -13,14 +12,6 @@ try:  # pragma: no cover - optional dependency
     from pgvector.sqlalchemy import Vector as PGVector  # type: ignore
 except Exception:  # pragma: no cover - optional dependency
     PGVector = None  # type: ignore
-
-
-def _dialect_name() -> str:
-    try:
-        bind = Base.metadata.bind
-        return sa.inspect(bind).dialect.name if bind is not None else ""
-    except Exception:  # pragma: no cover - engine not yet bound
-        return ""
 
 
 # Always use string UUIDs at ORM level to avoid premature dialect binding issues.
@@ -34,9 +25,11 @@ def _generate_id() -> str:
 
 _ID_DEFAULT = _generate_id
 
-# Store embeddings in JSON at ORM level; pgvector specifics handled in migrations.
-Vector = None  # type: ignore
-_EMBEDDING_TYPE = JSON
+# Use pgvector when available with automatic fallback to JSON for SQLite tests.
+if PGVector is not None:
+    _EMBEDDING_TYPE = JSON().with_variant(PGVector(1536), "postgresql")
+else:  # pragma: no cover - pgvector not installed
+    _EMBEDDING_TYPE = JSON()
 
 
 class SharedMemory(Base):
