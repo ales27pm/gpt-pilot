@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import re
 import subprocess
-from typing import Optional
+from typing import Optional, Tuple
 
 import requests
 
@@ -51,42 +51,35 @@ def set_pre_commit_hook(repo_path: str, script: str) -> None:
     git_dir = os.path.join(repo_path, ".git")
     if not os.path.isdir(git_dir):
         raise FileNotFoundError(f"No .git directory found in {repo_path}. Is this a valid git repository?")
+
     hooks_dir = os.path.join(git_dir, "hooks")
-    def _get_repo_owner_and_name(repo_path: str) -> tuple[str, str, str]:
-        """Return (host, owner, name) for repository at ``repo_path``."""
+    os.makedirs(hooks_dir, exist_ok=True)
 
-        result = subprocess.run(
-            ["git", "config", "--get", "remote.origin.url"],
-            cwd=repo_path,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        url = result.stdout.strip()
+    hook_path = os.path.join(hooks_dir, "pre-commit")
+    with open(hook_path, "w", encoding="utf-8") as f:
+        f.write(script)
+    os.chmod(hook_path, os.stat(hook_path).st_mode | 0o111)
 
-        host = ""
-        path = ""
-        if url.startswith("git@"):
-            # SSH format: git@host:owner/repo(.git)
-            try:
-                _, rest = url.split("@", 1)
-                host, path = rest.split(":", 1)
-            except ValueError as e:
-                raise ValueError(f"Unsupported remote URL format: {url}") from e
-        else:
-            # HTTPS format: https://host/owner/repo(.git)
-            from urllib.parse import urlparse
-            parsed = urlparse(url)
-            host = parsed.hostname or ""
-            path = parsed.path.lstrip("/")
 
-        if path.endswith(".git"):
-            path = path[:-4]
-        owner, name = path.split("/", 1)
-        return host, owner, name
+def _get_repo_owner_and_name(repo_path: str) -> Tuple[str, str]:
+    """Return (owner, name) for repository at ``repo_path``.
 
-    if not remote_url:
+    The function reads the ``remote.origin.url`` from the git config and
+    extracts owner and repository name if it points to GitHub.
+    """
+
+    config_path = os.path.join(repo_path, ".git", "config")
+    if not os.path.isfile(config_path):
+        raise ValueError("Could not find git config.")
+
+    with open(config_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    match = re.search(r"url\s*=\s*(.+)", content)
+    if not match:
         raise ValueError("Could not find remote URL in git config.")
+
+    remote_url = match.group(1).strip()
 
     patterns = [
         r"git@github\.com:(?P<owner>[^/]+)/(?P<name>[^/.]+)(\.git)?$",
@@ -110,23 +103,7 @@ def create_pull_request(
     token: str,
     base: str = "main",
 ) -> dict:
-    """Create a pull request for ``branch`` against ``base``.
-
-    Parameters
-    ----------
-    repo_path: str
-        Local path to the repository.
-    branch: str
-        Name of the branch to merge.
-    title: str
-        Pull request title.
-    body: str
-        Pull request body content.
-    token: str
-        GitHub personal access token.
-    base: str
-        Target branch for the pull request (default ``"main"``).
-    """
+    """Create a pull request for ``branch`` against ``base``."""
 
     owner, name = _get_repo_owner_and_name(repo_path)
     url = f"https://api.github.com/repos/{owner}/{name}/pulls"
@@ -135,3 +112,13 @@ def create_pull_request(
     response = requests.post(url, json=payload, headers=headers, timeout=10)
     response.raise_for_status()
     return response.json()
+
+
+__all__ = [
+    "clone_repository",
+    "commit_all",
+    "push",
+    "set_pre_commit_hook",
+    "_get_repo_owner_and_name",
+    "create_pull_request",
+]

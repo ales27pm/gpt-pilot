@@ -294,3 +294,24 @@ def test_message_iterator():
         {"role": "system", "content": "hello"},
         {"role": "user", "content": "world"},
     ]
+
+
+def test_trim_to_tokens_preserves_system_message():
+    convo = Convo("system message")
+    for _ in range(10):
+        convo.user("hello world")
+    limit = convo.token_length() - 10
+    convo.trim_to_tokens(limit)
+    assert convo.messages[0]["role"] == "system"
+    assert convo.token_length() <= limit
+
+
+def test_trim_to_tokens_trims_from_start():
+    convo = Convo("system message")
+    for i in range(5):
+        convo.user(f"hello {i}")
+    first_user = convo.messages[1]
+    limit = convo.token_length() - 5
+    convo.trim_to_tokens(limit)
+    assert first_user not in convo.messages
+    assert convo.token_length() <= limit

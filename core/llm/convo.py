@@ -1,6 +1,10 @@
 from copy import deepcopy
 from typing import Any, Iterator, Optional
 
+import tiktoken
+
+tokenizer = tiktoken.get_encoding("cl100k_base")
+
 
 class Convo:
     """
@@ -162,6 +166,21 @@ class Convo:
         :return: An iterator over the messages.
         """
         return iter(self.messages)
+
+    def token_length(self) -> int:
+        """Estimate the number of tokens in the conversation."""
+        return sum(3 + len(tokenizer.encode(msg.get("content", ""))) for msg in self.messages)
+
+    def trim_to_tokens(self, max_tokens: int) -> "Convo":
+        """Trim conversation so that total token count does not exceed ``max_tokens``.
+
+        Messages are removed from the start of the conversation, preserving the
+        first system message if present.
+        """
+        while self.token_length() > max_tokens and len(self.messages) > 1:
+            del_index = 1 if self.messages[0]["role"] == "system" else 0
+            del self.messages[del_index]
+        return self
 
     def __repr__(self) -> str:
         return f"<Convo({self.messages})>"
