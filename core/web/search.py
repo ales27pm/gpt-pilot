@@ -16,6 +16,10 @@ from urllib.parse import urlparse
 import httpx
 import trafilatura
 
+from core.log import get_logger
+
+log = get_logger(__name__)
+
 BRAVE_SEARCH_API = "https://api.search.brave.com/res/v1/web/search"
 
 # A modest list of domains generally considered reliable. The list is not
@@ -89,12 +93,24 @@ async def brave_search(
     headers = {"Accept": "application/json", "X-Subscription-Token": key}
     params = {"q": query, "count": count}
 
-    async with httpx.AsyncClient(timeout=10) as client:
-        resp = await client.get(BRAVE_SEARCH_API, params=params, headers=headers)
-        resp.raise_for_status()
+    resp = None
+    for attempt in range(3):
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.get(BRAVE_SEARCH_API, params=params, headers=headers)
+                resp.raise_for_status()
+            break
+        except (httpx.RequestError, httpx.HTTPStatusError) as exc:
+            if attempt == 2:
+                if isinstance(exc, httpx.HTTPStatusError):
+                    message = f"Brave search failed with status code {exc.response.status_code}: {exc.response.text}"
+                else:
+                    message = f"Brave search request failed: {exc}"
+                raise BraveSearchError(message) from exc
+            await asyncio.sleep(2**attempt)
 
     data = resp.json()
-    web_results = data.get("web", {}).get("results", [])
+    web_results = data.get("web", {}).get("results", [])[:count]
     results: List[WebResult] = []
 
     async def fetch_with_sem(url: str, sem: asyncio.Semaphore) -> str:
@@ -120,6 +136,7 @@ async def brave_search(
 
     for (url, title, snippet), content in zip(items, contents):
         if isinstance(content, Exception):
+            log.warning("Failed to fetch content for URL: %s", url, exc_info=content)
             content = ""
         results.append(WebResult(url=url, title=title, snippet=snippet, content=content))
 

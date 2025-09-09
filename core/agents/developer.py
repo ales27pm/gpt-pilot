@@ -156,12 +156,12 @@ class Developer(ChatWithBreakdownMixin, RelevantFilesMixin, BaseAgent):
             AgentConvo(self)
             .template(
                 "iteration",
-                user_feedback=user_feedback,
-                user_feedback_qa=None,
-                next_solution_to_try=None,
-                docs=self.current_state.docs,
-                web=self.current_state.web,
-                test_instructions=json.loads(current_task.get("test_instructions") or "[]"),
+                **self.prompt_context(
+                    user_feedback=user_feedback,
+                    user_feedback_qa=None,
+                    next_solution_to_try=None,
+                    test_instructions=json.loads(current_task.get("test_instructions") or "[]"),
+                ),
             )
             .assistant(description)
             .template("parse_task")
@@ -226,12 +226,12 @@ class Developer(ChatWithBreakdownMixin, RelevantFilesMixin, BaseAgent):
         llm = self.get_llm(TASK_BREAKDOWN_AGENT_NAME, stream_output=True)
         convo = AgentConvo(self).template(
             "breakdown",
-            task=current_task,
-            iteration=None,
-            current_task_index=current_task_index,
-            docs=self.current_state.docs,
-            web=self.current_state.web,
-            related_api_endpoints=related_api_endpoints,
+            **self.prompt_context(
+                task=current_task,
+                iteration=None,
+                current_task_index=current_task_index,
+                related_api_endpoints=related_api_endpoints,
+            ),
         )
         response: str = await llm(convo)
         convo.assistant(response)

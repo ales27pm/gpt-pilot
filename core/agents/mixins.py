@@ -119,13 +119,13 @@ class IterationPromptMixin:
         llm = self.get_llm(TROUBLESHOOTER_BUG_REPORT, stream_output=True)
         convo = AgentConvo(self).template(
             "iteration",
-            user_feedback=user_feedback,
-            user_feedback_qa=user_feedback_qa,
-            next_solution_to_try=next_solution_to_try,
-            bug_hunting_cycles=bug_hunting_cycles,
-            docs=self.current_state.docs,
-            web=self.current_state.web,
-            test_instructions=json.loads(self.current_state.current_task.get("test_instructions") or "[]"),
+            **self.prompt_context(
+                user_feedback=user_feedback,
+                user_feedback_qa=user_feedback_qa,
+                next_solution_to_try=next_solution_to_try,
+                bug_hunting_cycles=bug_hunting_cycles,
+                test_instructions=json.loads(self.current_state.current_task.get("test_instructions") or "[]"),
+            ),
         )
         llm_solution: str = await llm(convo)
 

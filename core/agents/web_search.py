@@ -23,6 +23,8 @@ class WebSearch(BaseAgent):
     agent_type = "web-search"
     display_name = "Web search"
 
+    MAX_CONTENT_LENGTH = 2000
+
     async def run(self) -> AgentResponse:
         if self.current_state.specification.example_project:
             self.next_state.web = []
@@ -41,14 +43,22 @@ class WebSearch(BaseAgent):
         await self.send_message("Searching the web for relevant information...")
         queries: WebQueries = await llm(convo, parser=JSONParser(WebQueries))
 
+        deduped_queries = list(dict.fromkeys(queries.queries))
         results: List[dict] = []
-        for q in queries.queries:
+        for q in deduped_queries:
             try:
                 search_results = await brave_search(q)
             except BraveSearchError:
                 log.warning("Web search failed", exc_info=True)
                 continue
-            results.extend(asdict(r) for r in search_results)
+            for r in search_results:
+                data = asdict(r)
+                if len(data.get("content", "")) > self.MAX_CONTENT_LENGTH:
+                    data["content"] = data["content"][: self.MAX_CONTENT_LENGTH]
+                results.append(data)
+
+        if not results:
+            await self.send_message("Web search failed to retrieve any results.")
 
         self.next_state.web = results
         return AgentResponse.done(self)

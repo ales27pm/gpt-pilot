@@ -38,3 +38,25 @@ async def test_web_search_handles_errors(mock_search, agentcontext):
 
     await ws.run()
     assert ws.next_state.web == []
+    assert "failed" in ui.send_message.await_args_list[-1].args[0]
+
+
+@patch("core.agents.web_search.brave_search")
+@pytest.mark.asyncio
+async def test_web_search_aggregates_multiple_queries(mock_search, agentcontext):
+    sm, _, ui, mock_llm = agentcontext
+
+    sm.current_state.tasks = [{"description": "Some task", "status": "todo"}]
+    await sm.commit()
+
+    mock_llm_return = WebQueries(queries=["q1", "q2"])
+    ws = WebSearch(sm, ui)
+    ws.get_llm = mock_llm(return_value=mock_llm_return)
+    mock_search.side_effect = [
+        [WebResult(url="http://example.com/1", title="1", snippet="", content="")],
+        [WebResult(url="http://example.com/2", title="2", snippet="", content="")],
+    ]
+
+    await ws.run()
+    urls = {r["url"] for r in ws.next_state.web}
+    assert urls == {"http://example.com/1", "http://example.com/2"}
