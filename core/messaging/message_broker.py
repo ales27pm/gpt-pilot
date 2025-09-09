@@ -12,7 +12,7 @@ class MessageBroker:
     ``asyncio.Queue``. Each subscriber receives its own queue so that every
     subscriber gets every published message. Queues have a configurable
     ``maxsize`` to avoid unbounded growth when subscribers are slow or
-    unavailable.
+    unavailable. Subscribers can be removed with :meth:`unsubscribe`.
     """
 
     def __init__(self, maxsize: int = 1000) -> None:
@@ -29,6 +29,15 @@ class MessageBroker:
         queue: asyncio.Queue[Any] = asyncio.Queue(maxsize=self._maxsize)
         self._queues[topic].append(queue)
         return queue
+
+    def unsubscribe(self, topic: str, queue: asyncio.Queue[Any]) -> None:
+        """Remove ``queue`` from ``topic``'s subscribers."""
+        try:
+            self._queues[topic].remove(queue)
+            if not self._queues[topic]:
+                del self._queues[topic]
+        except (KeyError, ValueError):
+            pass
 
     async def get(self, queue: asyncio.Queue[Any]) -> Any:
         """Get the next message from the subscriber's ``queue``."""

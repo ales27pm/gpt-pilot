@@ -37,3 +37,13 @@ async def test_multiple_topics_are_isolated():
     msg_b = await asyncio.wait_for(broker.get(queue_b), timeout=1)
     assert msg_a == {"topic": "a"}
     assert msg_b == {"topic": "b"}
+
+
+@pytest.mark.asyncio
+async def test_unsubscribe_stops_receiving_messages():
+    broker = MessageBroker()
+    queue = broker.subscribe("topic")
+    broker.unsubscribe("topic", queue)
+    await broker.publish("topic", {"value": 1})
+    with pytest.raises(asyncio.TimeoutError):
+        await asyncio.wait_for(broker.get(queue), timeout=0.1)
