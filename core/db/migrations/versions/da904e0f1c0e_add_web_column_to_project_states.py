@@ -1,7 +1,7 @@
 """Add web column to project_states
 
 Revision ID: da904e0f1c0e
-Revises: b760f66138c0
+Revises: 8a67f9e83b3e
 Create Date: 2025-09-09 00:00:00.000000
 
 """
