@@ -29,7 +29,9 @@ def upgrade() -> None:
         "id", pg.UUID(as_uuid=True) if use_pgvector else sa.String(length=36), primary_key=True
     )
     embedding_col = sa.Column(
-        "embedding", Vector(1536) if use_pgvector else sa.JSON(), nullable=not use_pgvector
+        "embedding",
+        Vector(1536) if use_pgvector else sa.JSON(),
+        nullable=False,
     )
 
     op.create_table(
