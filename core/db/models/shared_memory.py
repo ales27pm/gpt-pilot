@@ -40,10 +40,10 @@ class SharedMemory(Base):
 
     __tablename__ = "shared_memory"
 
-    id: Mapped[Union[UUID, str]] = mapped_column(
+    id: Mapped[str] = mapped_column(
         _ID_TYPE, primary_key=True, default=_ID_DEFAULT
     )
     agent_type: Mapped[str] = mapped_column(String(50), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    embedding: Mapped[List[float]] = mapped_column(_EMBEDDING_TYPE)
+    embedding: Mapped[List[float]] = mapped_column(_EMBEDDING_TYPE, nullable=False)
 
