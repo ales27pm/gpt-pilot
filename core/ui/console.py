@@ -1,10 +1,10 @@
-from typing import Optional
 import inspect
+from typing import Optional
 
 from prompt_toolkit.shortcuts import PromptSession
 
 from core.log import get_logger
-from core.ui.base import UIBase, UIClosedError, UISource, UserInput
+from core.ui.base import JSONDict, JSONList, UIBase, UIClosedError, UISource, UserInput
 
 log = get_logger(__name__)
 
@@ -119,9 +119,9 @@ class PlainConsoleUI(UIBase):
         if verbose:
             self._print_question(question, hint, buttons, default, source)
 
-        session = PromptSession("> ")
+        session: PromptSession[str] = PromptSession("> ")
 
-        prompt_kwargs = {"default": initial_text or ""}
+        prompt_kwargs: dict[str, object] = {"default": initial_text or ""}
         if "placeholder" in inspect.signature(session.prompt_async).parameters:
             prompt_kwargs["placeholder"] = placeholder
 
@@ -144,14 +144,14 @@ class PlainConsoleUI(UIBase):
             if verbose:
                 print("Please provide a valid input")
 
-    async def send_project_stage(self, data: dict):
+    async def send_project_stage(self, data: JSONDict) -> None:
         pass
 
     async def send_epics_and_tasks(
         self,
-        epics: list[dict],
-        tasks: list[dict],
-    ):
+        epics: JSONList | None = None,
+        tasks: JSONList | None = None,
+    ) -> None:
         pass
 
     async def send_task_progress(
@@ -162,29 +162,29 @@ class PlainConsoleUI(UIBase):
         source: str,
         status: str,
         source_index: int = 1,
-        tasks: list[dict] = None,
-    ):
+        tasks: JSONList | None = None,
+    ) -> None:
         pass
 
     async def send_step_progress(
         self,
         index: int,
         n_steps: int,
-        step: dict,
+        step: JSONDict,
         task_source: str,
-    ):
+    ) -> None:
         pass
 
     async def send_modified_files(
         self,
-        modified_files: dict[str, str, str],
-    ):
+        modified_files: JSONList,
+    ) -> None:
         pass
 
     async def send_data_about_logs(
         self,
-        data_about_logs: dict,
-    ):
+        data_about_logs: JSONDict,
+    ) -> None:
         pass
 
     async def send_run_command(self, run_command: str):
@@ -199,13 +199,13 @@ class PlainConsoleUI(UIBase):
     async def send_project_root(self, path: str):
         pass
 
-    async def send_project_stats(self, stats: dict):
+    async def send_project_stats(self, stats: JSONDict):
         pass
 
     async def send_test_instructions(self, test_instructions: str, project_state_id: Optional[str] = None):
         pass
 
-    async def knowledge_base_update(self, knowledge_base: dict):
+    async def knowledge_base_update(self, knowledge_base: JSONDict):
         pass
 
     async def send_file_status(self, file_path: str, file_status: str, source: Optional[UISource] = None):

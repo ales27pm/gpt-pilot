@@ -333,8 +333,8 @@ class BaseLLMClient:
         from .anthropic_client import AnthropicClient
         from .azure_client import AzureClient
         from .groq_client import GroqClient
-        from .openai_client import OpenAIClient
         from .ollama_client import OllamaClient
+        from .openai_client import OpenAIClient
 
         if provider == LLMProvider.OPENAI:
             return OpenAIClient

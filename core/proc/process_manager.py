@@ -19,6 +19,7 @@ NONBLOCK_READ_TIMEOUT = 0.01
 BUSY_WAIT_INTERVAL = 0.1
 WATCHER_IDLE_INTERVAL = 1.0
 MAX_COMMAND_TIMEOUT = 180
+DEFAULT_KILL_WAIT_TIMEOUT = 5
 
 
 @dataclass
@@ -30,6 +31,7 @@ class LocalProcess:
     stdout: str
     stderr: str
     _process: asyncio.subprocess.Process
+    kill_wait_timeout: float
 
     def __hash__(self) -> int:
         return hash(self.id)
@@ -41,6 +43,7 @@ class LocalProcess:
         cwd: str = ".",
         env: dict[str, str],
         bg: bool = False,
+        kill_wait_timeout: float = DEFAULT_KILL_WAIT_TIMEOUT,
     ) -> "LocalProcess":
         log.debug(f"Starting process: {cmd} (cwd={cwd})")
         _process = await asyncio.create_subprocess_shell(
@@ -63,6 +66,7 @@ class LocalProcess:
             stdout="",
             stderr="",
             _process=_process,
+            kill_wait_timeout=kill_wait_timeout,
         )
 
     async def wait(self, timeout: Optional[float] = None) -> int:
@@ -74,8 +78,14 @@ class LocalProcess:
         except asyncio.TimeoutError:
             log.debug(f"Process {self.cmd} still running after {timeout}s, terminating")
             await self.terminate()
-            # FIXME: this may still hang if we don't manage to kill the process.
-            retcode = await self._process.wait()
+            try:
+                retcode = await asyncio.wait_for(self._process.wait(), self.kill_wait_timeout)
+            except asyncio.TimeoutError:
+                log.warning(
+                    "Process %s did not exit after SIGKILL; forcing return code -1",
+                    self.cmd,
+                )
+                retcode = -1
 
         return retcode
 
@@ -149,6 +159,7 @@ class ProcessManager:
         env: Optional[dict[str, str]] = None,
         output_handler: Optional[Callable] = None,
         exit_handler: Optional[Callable] = None,
+        kill_wait_timeout: float = DEFAULT_KILL_WAIT_TIMEOUT,
     ):
         if env is None:
             env = deepcopy(environ)
@@ -159,6 +170,7 @@ class ProcessManager:
         self.watcher_task = asyncio.create_task(self.watcher())
         self.output_handler = output_handler
         self.exit_handler = exit_handler
+        self.kill_wait_timeout = kill_wait_timeout
 
     async def stop_watcher(self):
         """
@@ -213,7 +225,13 @@ class ProcessManager:
     ) -> LocalProcess:
         env = {**self.default_env, **(env or {})}
         abs_cwd = abspath(join(self.root_dir, cwd))
-        process = await LocalProcess.start(cmd, cwd=abs_cwd, env=env, bg=bg)
+        process = await LocalProcess.start(
+            cmd,
+            cwd=abs_cwd,
+            env=env,
+            bg=bg,
+            kill_wait_timeout=self.kill_wait_timeout,
+        )
         if bg:
             self.processes[process.id] = process
         return process

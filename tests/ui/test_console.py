@@ -1,7 +1,8 @@
+import inspect
 from unittest.mock import AsyncMock, patch
 
-import inspect
 import pytest
+
 from core.ui.base import AgentSource, UIClosedError
 from core.ui.console import PlainConsoleUI
 

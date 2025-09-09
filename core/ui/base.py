@@ -1,7 +1,13 @@
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel
+
+JSONDict = dict[str, Any]
+"""Mapping of string keys to JSON-serializable values used in UI payloads."""
+
+JSONList = list[JSONDict]
+"""List of :class:`JSONDict` items, such as modified file descriptors."""
 
 
 class ProjectStage(str, Enum):
@@ -215,25 +221,16 @@ class UIBase:
         """
         raise NotImplementedError()
 
-    async def send_project_stage(self, data: dict):
-        """
-        Send a project stage to the UI.
-
-        :param data: Project stage data.
-        """
+    async def send_project_stage(self, data: JSONDict) -> None:
+        """Send a project stage to the UI."""
         raise NotImplementedError()
 
     async def send_epics_and_tasks(
         self,
-        epics: list[dict] = None,
-        tasks: list[dict] = None,
-    ):
-        """
-        Send epics and tasks info to the UI.
-
-        :param epics: List of all epics.
-        :param tasks: List of all tasks.
-        """
+        epics: JSONList | None = None,
+        tasks: JSONList | None = None,
+    ) -> None:
+        """Send epics and tasks info to the UI."""
         raise NotImplementedError()
 
     async def send_task_progress(
@@ -244,52 +241,31 @@ class UIBase:
         source: str,
         status: str,
         source_index: int = 1,
-        tasks: list[dict] = None,
-    ):
-        """
-        Send a task progress update to the UI.
-
-        :param index: Index of the current task, starting from 1.
-        :param n_tasks: Total number of tasks.
-        :param description: Description of the task.
-        :param source: Source of the task, one of: 'app', 'feature', 'debugger', 'troubleshooting', 'review'.
-        :param status: Status of the task, can be 'in_progress' or 'done'.
-        :param source_index: Index of the source.
-        :param tasks: List of all tasks.
-        """
+        tasks: JSONList | None = None,
+    ) -> None:
+        """Send a task progress update to the UI."""
         raise NotImplementedError()
 
     async def send_step_progress(
         self,
         index: int,
         n_steps: int,
-        step: dict,
+        step: JSONDict,
         task_source: str,
-    ):
-        """
-        Send a step progress update to the UI.
-
-        :param index: Index of the step within the current task, starting from 1.
-        :param n_steps: Number of steps in the current task.
-        :param step: Step data.
-        :param task_source: Source of the task, one of: 'app', 'feature', 'debugger', 'troubleshooting', 'review'.
-        """
+    ) -> None:
+        """Send a step progress update to the UI."""
         raise NotImplementedError()
 
     async def send_modified_files(
         self,
-        modified_files: dict[str, str, str],
-    ):
-        """
-        Send a list of modified files to the UI.
-
-        :param modified_files: List of modified files.
-        """
+        modified_files: JSONList,
+    ) -> None:
+        """Send a list of modified files to the UI."""
         raise NotImplementedError()
 
     async def send_data_about_logs(
         self,
-        data_about_logs: dict,
+        data_about_logs: JSONDict,
     ):
         """
         Send the data about debugging logs.
@@ -344,7 +320,7 @@ class UIBase:
         """
         raise NotImplementedError()
 
-    async def send_project_stats(self, stats: dict):
+    async def send_project_stats(self, stats: JSONDict):
         """
         Send project statistics to the UI.
 
@@ -366,7 +342,7 @@ class UIBase:
         """
         raise NotImplementedError()
 
-    async def knowledge_base_update(self, knowledge_base: dict):
+    async def knowledge_base_update(self, knowledge_base: JSONDict):
         """
         Send updated knowledge base to the UI.
 
