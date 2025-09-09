@@ -1,4 +1,5 @@
 from typing import Optional
+import inspect
 
 from prompt_toolkit.shortcuts import PromptSession
 
@@ -62,6 +63,25 @@ class PlainConsoleUI(UIBase):
     ):
         pass
 
+    def _print_question(
+        self,
+        question: str,
+        hint: Optional[str],
+        buttons: Optional[dict[str, str]],
+        default: Optional[str],
+        source: Optional[UISource],
+    ) -> None:
+        if source:
+            print(f"[{source}] {question}")
+        else:
+            print(question)
+        if hint:
+            print(f"Hint: {hint}")
+        if buttons:
+            for k, v in buttons.items():
+                default_str = " (default)" if k == default else ""
+                print(f"  [{k}]: {v}{default_str}")
+
     async def ask_question(
         self,
         question: str,
@@ -79,21 +99,35 @@ class PlainConsoleUI(UIBase):
         extra_info: Optional[str] = None,
         placeholder: Optional[str] = None,
     ) -> UserInput:
-        if source:
-            print(f"[{source}] {question}")
-        else:
-            print(f"{question}")
+        """Prompt user with a question and return their response.
 
-        if buttons:
-            for k, v in buttons.items():
-                default_str = " (default)" if k == default else ""
-                print(f"  [{k}]: {v}{default_str}")
+        Args:
+            question: The question text to display.
+            buttons: Optional mapping of button keys to descriptions.
+            default: Default button key or text if user submits empty input.
+            buttons_only: If True, only button choices are allowed.
+            allow_empty: Allow empty text responses.
+            full_screen: Unused placeholder for UI compatibility.
+            hint: Optional helper text displayed under the question.
+            verbose: If False, suppress printing of question, hint, and buttons.
+            initial_text: Pre-populated text in the prompt.
+            source: Optional source of the question printed in brackets.
+            project_state_id: Unused project state identifier.
+            extra_info: Additional info not used by this UI.
+            placeholder: Placeholder text shown in the prompt input field.
+        """
+        if verbose:
+            self._print_question(question, hint, buttons, default, source)
 
         session = PromptSession("> ")
 
+        prompt_kwargs = {"default": initial_text or ""}
+        if "placeholder" in inspect.signature(session.prompt_async).parameters:
+            prompt_kwargs["placeholder"] = placeholder
+
         while True:
             try:
-                choice = await session.prompt_async(default=initial_text or "")
+                choice = await session.prompt_async(**prompt_kwargs)
                 choice = choice.strip()
             except KeyboardInterrupt:
                 raise UIClosedError()
@@ -102,11 +136,13 @@ class PlainConsoleUI(UIBase):
             if buttons and choice in buttons:
                 return UserInput(button=choice, text=None)
             if buttons_only:
-                print("Please choose one of available options")
+                if verbose:
+                    print("Please choose one of available options")
                 continue
             if choice or allow_empty:
                 return UserInput(button=None, text=choice)
-            print("Please provide a valid input")
+            if verbose:
+                print("Please provide a valid input")
 
     async def send_project_stage(self, data: dict):
         pass
