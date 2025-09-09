@@ -5,6 +5,13 @@ from typing import Any, Optional
 import httpx
 from ollama import AsyncClient
 
+try:  # pragma: no cover - optional dependency
+    import tiktoken
+
+    tokenizer = tiktoken.get_encoding("cl100k_base")
+except Exception:  # pragma: no cover - optional dependency
+    tokenizer = None  # type: ignore
+
 from core.config import LLMProvider
 from core.llm.base import BaseLLMClient
 from core.llm.convo import Convo
@@ -37,34 +44,41 @@ class OllamaClient(BaseLLMClient):
         if json_mode:
             kwargs["format"] = "json"
 
-        stream = await self.client.chat(
-            model=self.config.model,
-            messages=convo.messages,
-            stream=True,
-            options={"temperature": (self.config.temperature if temperature is None else temperature)},
-            **kwargs,
-        )
-
         response_chunks: list[str] = []
-        async for chunk in stream:
-            message = chunk.get("message", {})
-            content = message.get("content")
-            if not content:
-                continue
+        try:
+            stream = await self.client.chat(
+                model=self.config.model,
+                messages=convo.messages,
+                stream=True,
+                options={"temperature": (self.config.temperature if temperature is None else temperature)},
+                **kwargs,
+            )
 
-            response_chunks.append(content)
+            async for chunk in stream:
+                message = chunk.get("message", {})
+                content = message.get("content")
+                if not content:
+                    continue
+
+                response_chunks.append(content)
+                if self.stream_handler:
+                    await self.stream_handler(content)
+        except httpx.HTTPError:
+            # Propagate connection/timeout errors to caller
+            raise
+        finally:
             if self.stream_handler:
-                await self.stream_handler(content)
-
-        if self.stream_handler:
-            await self.stream_handler(None)
+                await self.stream_handler(None)
 
         full_response = "".join(response_chunks)
 
-        # Ollama currently does not return token usage, so approximate using
-        # whitespace tokenization.
-        prompt_tokens = sum(len(msg.get("content", "").split()) for msg in convo.messages)
-        completion_tokens = len(full_response.split())
+        def _count_tokens(text: str) -> int:
+            if tokenizer is None:
+                return len(text.split())
+            return len(tokenizer.encode(text))
+
+        prompt_tokens = sum(_count_tokens(msg.get("content", "")) for msg in convo.messages)
+        completion_tokens = _count_tokens(full_response)
 
         return full_response, prompt_tokens, completion_tokens
 
