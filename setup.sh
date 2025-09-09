@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 # Interactive setup script for GPT Pilot
 
@@ -8,21 +8,20 @@ if ! command -v python3 >/dev/null 2>&1; then
   echo "Python3 is required but not installed. Please install Python 3.9 or newer."
   exit 1
 fi
-PYTHON_VERSION=$(python3 -c 'import sys; print("{}.{}".format(sys.version_info.major, sys.version_info.minor))')
-# simple comparison using python - works in bash: compare using python
-python3 - <<'PY'
+PYTHON_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+if ! python3 - <<'PY'
 import sys
 major, minor = sys.version_info[:2]
 if major < 3 or (major == 3 and minor < 9):
     sys.exit(1)
 PY
-if [ $? -ne 0 ]; then
+then
   echo "Python 3.9+ is required (found $PYTHON_VERSION)."
   exit 1
 fi
 
 # optionally create virtual environment
-read -p "Create a Python virtual environment? (y/N): " create_venv
+read -r -p "Create a Python virtual environment? (y/N): " create_venv
 if [[ "$create_venv" =~ ^[Yy]$ ]]; then
   python3 -m venv venv
   source venv/bin/activate
@@ -40,24 +39,24 @@ if [ ! -f config.json ]; then
   echo "Created config.json from example-config.json"
 fi
 
-read -p "LLM provider (openai/anthropic/groq) [openai]: " provider
+read -r -p "LLM provider (openai/anthropic/groq) [openai]: " provider
 provider=${provider:-openai}
-read -p "API key for $provider: " api_key
-read -p "Base URL for $provider (leave blank for default): " base_url
+read -r -p "API key for $provider: " api_key
+read -r -p "Base URL for $provider (leave blank for default): " base_url
 
 python3 <<PY
-import json
-import sys
+import json, re
 file="config.json"
 with open(file) as f:
-    cfg=json.load(f)
+    content = re.sub(r'^\s*//.*$', '', f.read(), flags=re.MULTILINE)
+cfg = json.loads(content)
 
 if "llm" not in cfg:
     cfg["llm"]={}
-if provider not in cfg["llm"]:
-    cfg["llm"][provider]={"base_url": None, "api_key": None, "connect_timeout":60.0, "read_timeout":20.0}
+if "${provider}" not in cfg["llm"]:
+    cfg["llm"]["${provider}"]={"base_url": None, "api_key": None, "connect_timeout":60.0, "read_timeout":20.0}
 
-cfg["llm"]["{p}".format(p="${provider}")]["api_key"]="${api_key}"
+cfg["llm"]["${provider}"]["api_key"]="${api_key}"
 if "${base_url}" != "":
     cfg["llm"]["${provider}"]["base_url"]="${base_url}"
 
