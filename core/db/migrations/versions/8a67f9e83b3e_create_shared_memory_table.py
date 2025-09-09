@@ -26,7 +26,7 @@ def upgrade() -> None:
         op.execute("CREATE EXTENSION IF NOT EXISTS vector")
 
     id_col = sa.Column(
-        "id", pg.UUID(as_uuid=True) if use_pgvector else sa.String(length=36), primary_key=True
+        "id", sa.String(length=36), primary_key=True
     )
     embedding_col = sa.Column(
         "embedding",
