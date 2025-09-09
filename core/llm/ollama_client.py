@@ -21,6 +21,28 @@ class OllamaClient(BaseLLMClient):
         temperature: Optional[float] = None,
         json_mode: bool = False,
     ) -> tuple[str, int, int]:
+        # … any preceding code …
+
+        # Wire through format="json" when json_mode is requested
+        kwargs: dict[str, Any] = {}
+        if json_mode:
+            kwargs["format"] = "json"
+
+        stream = await self.client.chat(
+            model=self.config.model,
+            messages=convo.messages,
+            stream=True,
+            options={
+                "temperature": (
+                    self.config.temperature
+                    if temperature is None
+                    else temperature
+                )
+            },
+            **kwargs,
+        )
+
+        # … rest of the method …
         stream = await self.client.chat(
             model=self.config.model,
             messages=convo.messages,
