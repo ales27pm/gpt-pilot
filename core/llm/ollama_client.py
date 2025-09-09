@@ -1,9 +1,15 @@
 """Client for interacting with a local Ollama server."""
 
+import importlib.metadata
 from typing import Any, Optional
 
 import httpx
 from ollama import AsyncClient
+from packaging import version
+
+from core.config import LLMProvider
+from core.llm.base import BaseLLMClient
+from core.llm.convo import Convo
 
 try:  # pragma: no cover - optional dependency
     import tiktoken
@@ -12,9 +18,15 @@ try:  # pragma: no cover - optional dependency
 except Exception:  # pragma: no cover - optional dependency
     tokenizer = None  # type: ignore
 
-from core.config import LLMProvider
-from core.llm.base import BaseLLMClient
-from core.llm.convo import Convo
+try:  # pragma: no cover - best effort version detection
+    _ollama_version = version.parse(importlib.metadata.version("ollama"))
+except Exception:  # pragma: no cover - package metadata missing
+    _ollama_version = version.parse("0")
+
+# ``ollama`` 0.3.0+ accepts ``httpx.Timeout`` objects on the client. Older
+# releases only allow primitive timeout values. We detect the installed version
+# once at import time to pick the correct strategy.
+OLLAMA_SUPPORTS_TIMEOUT_OBJECT = _ollama_version >= version.parse("0.3.0")
 
 
 class OllamaClient(BaseLLMClient):
@@ -25,15 +37,24 @@ class OllamaClient(BaseLLMClient):
     def _init_client(self) -> None:
         """Initialize the Ollama AsyncClient.
 
-        Older versions of ``ollama`` only accept primitive timeout values on the
-        client. Passing an ``httpx.Timeout`` instance can raise ``TypeError`` at
-        runtime, so we avoid setting timeouts here and instead specify them per
-        request for maximum compatibility.
+        ``ollama`` has changed its timeout semantics across releases. For
+        versions prior to 0.3.0 the client only accepts primitive timeout values
+        (floats) and an ``httpx.Timeout`` instance would raise ``TypeError``.
+        Newer versions support the richer timeout configuration. We detect the
+        installed version at import time and pick the appropriate strategy.
         """
 
-        self.client = AsyncClient(
-            host=self.config.base_url or "http://localhost:11434",
-        )
+        host = self.config.base_url or "http://localhost:11434"
+        if OLLAMA_SUPPORTS_TIMEOUT_OBJECT:
+            timeout = httpx.Timeout(
+                connect=self.config.connect_timeout,
+                read=self.config.read_timeout,
+            )
+            self.client = AsyncClient(host=host, timeout=timeout)
+            self._use_request_timeout = False
+        else:
+            self.client = AsyncClient(host=host)
+            self._use_request_timeout = True
 
     async def _make_request(
         self,
@@ -49,25 +70,20 @@ class OllamaClient(BaseLLMClient):
 
         response_chunks: list[str] = []
         try:
-            request_timeout = self.config.read_timeout
+            chat_kwargs: dict[str, Any] = {
+                "model": self.config.model,
+                "messages": convo.messages,
+                "stream": True,
+                "options": {"temperature": (self.config.temperature if temperature is None else temperature)},
+                **kwargs,
+            }
+            if self._use_request_timeout:
+                chat_kwargs["timeout"] = self.config.read_timeout
             try:
-                stream = await self.client.chat(
-                    model=self.config.model,
-                    messages=convo.messages,
-                    stream=True,
-                    options={"temperature": (self.config.temperature if temperature is None else temperature)},
-                    timeout=request_timeout,
-                    **kwargs,
-                )
-            except TypeError:  # pragma: no cover - older ollama versions
-                # ``timeout`` is not supported; retry without it.
-                stream = await self.client.chat(
-                    model=self.config.model,
-                    messages=convo.messages,
-                    stream=True,
-                    options={"temperature": (self.config.temperature if temperature is None else temperature)},
-                    **kwargs,
-                )
+                stream = await self.client.chat(**chat_kwargs)
+            except TypeError:  # pragma: no cover - very old ollama versions
+                chat_kwargs.pop("timeout", None)
+                stream = await self.client.chat(**chat_kwargs)
 
             async for chunk in stream:
                 message = chunk.get("message", {})
