@@ -38,15 +38,16 @@ class SharedMemory:
 
     async def search(self, embedding: List[float], limit: int = 5) -> List[SharedMemoryModel]:
         self._validate_embedding(embedding)
-        if Vector is not None:
-            stmt = (
-                select(SharedMemoryModel)
-                .order_by(SharedMemoryModel.embedding.cosine_distance(embedding))
-                .limit(limit)
-            )
-        else:
-            # Fallback: no vector ops available, return recent entries
-            stmt = select(SharedMemoryModel).order_by(SharedMemoryModel.id.desc()).limit(limit)
         async with self.session_manager as session:
+            dialect = session.bind.dialect.name if session.bind is not None else ""
+            use_vector = Vector is not None and dialect == "postgresql"
+            if use_vector:
+                stmt = (
+                    select(SharedMemoryModel)
+                    .order_by(SharedMemoryModel.embedding.cosine_distance(embedding))
+                    .limit(limit)
+                )
+            else:
+                stmt = select(SharedMemoryModel).order_by(SharedMemoryModel.id.desc()).limit(limit)
             result = await session.execute(stmt)
             return list(result.scalars())
