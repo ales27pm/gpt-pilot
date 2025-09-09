@@ -26,7 +26,7 @@ def upgrade() -> None:
         op.execute("CREATE EXTENSION IF NOT EXISTS vector")
 
     id_col = sa.Column(
-        "id", sa.String(length=36), primary_key=True
+        "id", sa.String(length=36), primary_key=True, nullable=False
     )
     embedding_col = sa.Column(
         "embedding",
