@@ -72,6 +72,7 @@ class LLMProvider(str, Enum):
     GROQ = "groq"
     LM_STUDIO = "lm-studio"
     AZURE = "azure"
+    OLLAMA = "ollama"
 
 
 class UIAdapter(str, Enum):
@@ -320,6 +321,7 @@ class Config(_StrictModel):
         default={
             LLMProvider.OPENAI: ProviderConfig(),
             LLMProvider.ANTHROPIC: ProviderConfig(),
+            LLMProvider.OLLAMA: ProviderConfig(),
         }
     )
     agent: dict[str, AgentLLMConfig] = Field(

@@ -334,6 +334,7 @@ class BaseLLMClient:
         from .azure_client import AzureClient
         from .groq_client import GroqClient
         from .openai_client import OpenAIClient
+        from .ollama_client import OllamaClient
 
         if provider == LLMProvider.OPENAI:
             return OpenAIClient
@@ -343,6 +344,8 @@ class BaseLLMClient:
             return GroqClient
         elif provider == LLMProvider.AZURE:
             return AzureClient
+        elif provider == LLMProvider.OLLAMA:
+            return OllamaClient
         else:
             raise ValueError(f"Unsupported LLM provider: {provider.value}")
 
