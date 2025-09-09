@@ -41,7 +41,10 @@ class SharedMemory(Base):
     __tablename__ = "shared_memory"
 
     id: Mapped[str] = mapped_column(
-        _ID_TYPE, primary_key=True, default=_ID_DEFAULT
+        _ID_TYPE,
+        primary_key=True,
+        default=_ID_DEFAULT,
+        server_default=sa.text("gen_random_uuid()")  # safe on Postgres; ignored elsewhere
     )
     agent_type: Mapped[str] = mapped_column(String(50), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
