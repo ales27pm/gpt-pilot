@@ -11,8 +11,9 @@ from core.db.session import SessionManager
 class SharedMemory:
     """Vector-based shared memory accessible to all agents."""
 
-    def __init__(self, session_manager: SessionManager):
+    def __init__(self, session_manager: SessionManager, embedding_dim: int = 1536):
         self.session_manager = session_manager
+        self.embedding_dim = embedding_dim
 
     @property
     def enabled(self) -> bool:
@@ -21,8 +22,14 @@ class SharedMemory:
     async def add(self, agent_type: str, content: str, embedding: List[float]):
         if not self.enabled:
             raise RuntimeError("pgvector is not available")
+        if len(embedding) != self.embedding_dim:
+            raise ValueError(
+                f"Embedding length must be {self.embedding_dim}, got {len(embedding)}"
+            )
         async with self.session_manager as session:
-            record = SharedMemoryModel(agent_type=agent_type, content=content, embedding=embedding)
+            record = SharedMemoryModel(
+                agent_type=agent_type, content=content, embedding=embedding
+            )
             session.add(record)
             await session.commit()
             return record
@@ -30,6 +37,10 @@ class SharedMemory:
     async def search(self, embedding: List[float], limit: int = 5) -> List[SharedMemoryModel]:
         if not self.enabled:
             raise RuntimeError("pgvector is not available")
+        if len(embedding) != self.embedding_dim:
+            raise ValueError(
+                f"Input embedding length {len(embedding)} does not match expected length {self.embedding_dim}"
+            )
         stmt = (
             select(SharedMemoryModel)
             .order_by(SharedMemoryModel.embedding.cosine_distance(embedding))
