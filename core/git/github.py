@@ -20,7 +20,9 @@ def clone_repository(repo_url: str, destination: str, branch: Optional[str] = No
     destination: str
         Path where the repository should be cloned.
     branch: Optional[str]
-        Branch to checkout after cloning.
+        Branch to checkout after cloning. The ``-b`` flag is inserted before
+        the repository URL and destination to satisfy the ``git clone``
+        command's argument ordering requirements.
     """
 
     cmd = ["git", "clone"]
