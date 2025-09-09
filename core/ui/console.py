@@ -121,13 +121,13 @@ class PlainConsoleUI(UIBase):
 
         session: PromptSession[str] = PromptSession("> ")
 
-        prompt_kwargs: JSONDict = {"default": initial_text or ""}
+        prompt_kwargs: dict[str, object] = {"default": initial_text or ""}
         if "placeholder" in inspect.signature(session.prompt_async).parameters:
             prompt_kwargs["placeholder"] = placeholder
 
         while True:
             try:
-                choice = await session.prompt_async(**prompt_kwargs)  # type: ignore[call-arg]
+                choice = await session.prompt_async(**prompt_kwargs)
                 choice = choice.strip()
             except KeyboardInterrupt:
                 raise UIClosedError()

@@ -54,7 +54,6 @@ async def test_local_process_wait(tmp_path):
 
 
 @pytest.mark.asyncio
-@patch("core.proc.process_manager.KILL_WAIT_TIMEOUT", 0.1)
 async def test_local_process_wait_handles_unresponsive_process(tmp_path):
     cmd = "timeout 5" if platform == "win32" else "sleep 5"
 
@@ -63,6 +62,7 @@ async def test_local_process_wait_handles_unresponsive_process(tmp_path):
         cwd=tmp_path,
         env={"PATH": getenv("PATH")},
         bg=False,
+        kill_wait_timeout=0.1,
     )
 
     orig_wait = lp._process.wait

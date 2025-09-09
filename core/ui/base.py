@@ -4,7 +4,10 @@ from typing import Any, Optional
 from pydantic import BaseModel
 
 JSONDict = dict[str, Any]
+"""Mapping of string keys to JSON-serializable values used in UI payloads."""
+
 JSONList = list[JSONDict]
+"""List of :class:`JSONDict` items, such as modified file descriptors."""
 
 
 class ProjectStage(str, Enum):
