@@ -17,15 +17,17 @@ class SharedMemory:
 
     @property
     def enabled(self) -> bool:
-        return Vector is not None
+        # Search requires pgvector; storage works with JSON fallback
+        return True
 
-    async def add(self, agent_type: str, content: str, embedding: List[float]):
-        if not self.enabled:
-            raise RuntimeError("pgvector is not available")
+    def _validate_embedding(self, embedding: List[float]):
         if len(embedding) != self.embedding_dim:
             raise ValueError(
                 f"Embedding length must be {self.embedding_dim}, got {len(embedding)}"
             )
+
+    async def add(self, agent_type: str, content: str, embedding: List[float]):
+        self._validate_embedding(embedding)
         async with self.session_manager as session:
             record = SharedMemoryModel(
                 agent_type=agent_type, content=content, embedding=embedding
