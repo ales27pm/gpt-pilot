@@ -52,25 +52,38 @@ def set_pre_commit_hook(repo_path: str, script: str) -> None:
     if not os.path.isdir(git_dir):
         raise FileNotFoundError(f"No .git directory found in {repo_path}. Is this a valid git repository?")
     hooks_dir = os.path.join(git_dir, "hooks")
-    os.makedirs(hooks_dir, exist_ok=True)
-    hook_path = os.path.join(hooks_dir, "pre-commit")
-    with open(hook_path, "w", encoding="utf-8") as f:
-        f.write(script)
-    os.chmod(hook_path, 0o755)
+    def _get_repo_owner_and_name(repo_path: str) -> tuple[str, str, str]:
+        """Return (host, owner, name) for repository at ``repo_path``."""
 
+        result = subprocess.run(
+            ["git", "config", "--get", "remote.origin.url"],
+            cwd=repo_path,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        url = result.stdout.strip()
 
-def _get_repo_owner_and_name(repo_path: str) -> tuple[str, str]:
-    """Return (owner, name) for repository at ``repo_path``.
-    Only supports GitHub URLs. Raises ValueError for unsupported formats.
-    """
+        host = ""
+        path = ""
+        if url.startswith("git@"):
+            # SSH format: git@host:owner/repo(.git)
+            try:
+                _, rest = url.split("@", 1)
+                host, path = rest.split(":", 1)
+            except ValueError as e:
+                raise ValueError(f"Unsupported remote URL format: {url}") from e
+        else:
+            # HTTPS format: https://host/owner/repo(.git)
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            host = parsed.hostname or ""
+            path = parsed.path.lstrip("/")
 
-    git_config_path = os.path.join(repo_path, ".git", "config")
-    remote_url = None
-    with open(git_config_path, "r", encoding="utf-8") as f:
-        for line in f:
-            if line.strip().startswith("url ="):
-                remote_url = line.strip().split("=", 1)[1].strip()
-                break
+        if path.endswith(".git"):
+            path = path[:-4]
+        owner, name = path.split("/", 1)
+        return host, owner, name
 
     if not remote_url:
         raise ValueError("Could not find remote URL in git config.")
