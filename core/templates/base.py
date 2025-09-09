@@ -3,7 +3,7 @@ from os.path import dirname, join
 from typing import TYPE_CHECKING, Any, Optional, Type
 from uuid import uuid4
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from core.log import get_logger
 from core.templates.render import Renderer
@@ -20,10 +20,7 @@ class NoOptions(BaseModel):
     Options class for templates that do not require any options.
     """
 
-    class Config:
-        extra = "allow"
-
-    pass
+    model_config = ConfigDict(extra="allow")
 
 
 class BaseProjectTemplate:

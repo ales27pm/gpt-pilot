@@ -2,7 +2,7 @@ import asyncio
 import json
 from enum import Enum
 from os.path import basename
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 from pydantic import BaseModel, ValidationError
 
@@ -356,14 +356,14 @@ class IPCClientUI(UIBase):
         # Empty answer which we don't allow, treat as user cancelled the input
         return UserInput(cancelled=True)
 
-    async def send_project_stage(self, data: dict):
+    async def send_project_stage(self, data: dict[str, Any]) -> None:
         await self._send(MessageType.INFO, content=json.dumps(data))
 
     async def send_epics_and_tasks(
         self,
-        epics: list[dict],
-        tasks: list[dict],
-    ):
+        epics: list[dict[str, Any]] | None = None,
+        tasks: list[dict[str, Any]] | None = None,
+    ) -> None:
         await self._send(
             MessageType.EPICS_AND_TASKS,
             content={
@@ -380,8 +380,8 @@ class IPCClientUI(UIBase):
         source: str,
         status: str,
         source_index: int = 1,
-        tasks: list[dict] = None,
-    ):
+        tasks: list[dict[str, Any]] | None = None,
+    ) -> None:
         await self._send(
             MessageType.PROGRESS,
             content={
@@ -399,8 +399,8 @@ class IPCClientUI(UIBase):
 
     async def send_modified_files(
         self,
-        modified_files: dict[str, str, str],
-    ):
+        modified_files: list[dict[str, Any]],
+    ) -> None:
         await self._send(
             MessageType.MODIFIED_FILES,
             content={"files": modified_files},
@@ -410,9 +410,9 @@ class IPCClientUI(UIBase):
         self,
         index: int,
         n_steps: int,
-        step: dict,
+        step: dict[str, Any],
         task_source: str,
-    ):
+    ) -> None:
         await self._send(
             MessageType.PROGRESS,
             content={

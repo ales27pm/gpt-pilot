@@ -41,6 +41,7 @@ prompt-toolkit = "^3.0.48"
 jsonref = "^1.1.0"
 tenacity = "9.0.0"
 trafilatura = "^1.6.4"
+markupsafe = ">=2.0,<2.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.1.1"

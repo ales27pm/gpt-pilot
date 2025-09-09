@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel
 
@@ -215,25 +215,16 @@ class UIBase:
         """
         raise NotImplementedError()
 
-    async def send_project_stage(self, data: dict):
-        """
-        Send a project stage to the UI.
-
-        :param data: Project stage data.
-        """
+    async def send_project_stage(self, data: dict[str, Any]) -> None:
+        """Send a project stage to the UI."""
         raise NotImplementedError()
 
     async def send_epics_and_tasks(
         self,
-        epics: list[dict] = None,
-        tasks: list[dict] = None,
-    ):
-        """
-        Send epics and tasks info to the UI.
-
-        :param epics: List of all epics.
-        :param tasks: List of all tasks.
-        """
+        epics: list[dict[str, Any]] | None = None,
+        tasks: list[dict[str, Any]] | None = None,
+    ) -> None:
+        """Send epics and tasks info to the UI."""
         raise NotImplementedError()
 
     async def send_task_progress(
@@ -244,47 +235,26 @@ class UIBase:
         source: str,
         status: str,
         source_index: int = 1,
-        tasks: list[dict] = None,
-    ):
-        """
-        Send a task progress update to the UI.
-
-        :param index: Index of the current task, starting from 1.
-        :param n_tasks: Total number of tasks.
-        :param description: Description of the task.
-        :param source: Source of the task, one of: 'app', 'feature', 'debugger', 'troubleshooting', 'review'.
-        :param status: Status of the task, can be 'in_progress' or 'done'.
-        :param source_index: Index of the source.
-        :param tasks: List of all tasks.
-        """
+        tasks: list[dict[str, Any]] | None = None,
+    ) -> None:
+        """Send a task progress update to the UI."""
         raise NotImplementedError()
 
     async def send_step_progress(
         self,
         index: int,
         n_steps: int,
-        step: dict,
+        step: dict[str, Any],
         task_source: str,
-    ):
-        """
-        Send a step progress update to the UI.
-
-        :param index: Index of the step within the current task, starting from 1.
-        :param n_steps: Number of steps in the current task.
-        :param step: Step data.
-        :param task_source: Source of the task, one of: 'app', 'feature', 'debugger', 'troubleshooting', 'review'.
-        """
+    ) -> None:
+        """Send a step progress update to the UI."""
         raise NotImplementedError()
 
     async def send_modified_files(
         self,
-        modified_files: dict[str, str, str],
-    ):
-        """
-        Send a list of modified files to the UI.
-
-        :param modified_files: List of modified files.
-        """
+        modified_files: list[dict[str, Any]],
+    ) -> None:
+        """Send a list of modified files to the UI."""
         raise NotImplementedError()
 
     async def send_data_about_logs(

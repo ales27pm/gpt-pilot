@@ -27,7 +27,8 @@ async def test_create_initial_epic(agentcontext):
     assert sm.current_state.epics[1]["completed"] is False
 
 
-@pytest.mark.skip(reason="Temporary")
+@pytest.mark.skip(reason="Template not implemented")
+@pytest.mark.asyncio
 async def test_apply_project_template(agentcontext):
     sm, _, ui, _ = agentcontext
 
@@ -68,7 +69,8 @@ async def test_ask_for_feature(agentcontext):
     assert sm.current_state.epics[2]["completed"] is False
 
 
-@pytest.mark.skip(reason="Temporary")
+@pytest.mark.skip(reason="Requires complete planner integration")
+@pytest.mark.asyncio
 async def test_plan_epic(agentcontext):
     """
     If called and there's an incomplete epic, the TechLead agent should plan the epic.
