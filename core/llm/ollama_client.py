@@ -27,20 +27,24 @@ class OllamaClient(BaseLLMClient):
             stream=True,
             options={"temperature": self.config.temperature if temperature is None else temperature},
         )
-        response = []
+        response_chunks = []
         async for chunk in stream:
             message = chunk.get("message", {})
             content = message.get("content")
             if not content:
                 continue
-            response.append(content)
+            response_chunks.append(content)
             if self.stream_handler:
                 await self.stream_handler(content)
 
         if self.stream_handler:
             await self.stream_handler(None)
 
-        return "".join(response), 0, 0
+        full_response = "".join(response_chunks)
+        # Ollama currently does not return token usage, so approximate using whitespace tokenization.
+        prompt_tokens = sum(len(msg.get("content", "").split()) for msg in convo.messages)
+        completion_tokens = len(full_response.split())
+        return full_response, prompt_tokens, completion_tokens
 
 
 __all__ = ["OllamaClient"]
