@@ -20,7 +20,14 @@ su - devuser -c "mkdir -p $DB_DIR"
 
 set -e
 
-python3 -m pip install --no-cache-dir -r "$(dirname "$0")/requirements.txt"
+REQ_FILE="$(dirname "$0")/requirements.txt"
+if [ -f "$REQ_FILE" ]; then
+  if ! python3 -m pip install --no-cache-dir -r "$REQ_FILE"; then
+    echo "Warning: pip install failed; continuing startup" >&2
+  fi
+else
+  echo "Info: requirements.txt not found at $REQ_FILE; skipping dependency installation"
+fi
 
 su - devuser -c "cd /var/init_data/ && ./on-event-extension-install.sh &"
 
