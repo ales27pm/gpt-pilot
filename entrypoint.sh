@@ -29,7 +29,9 @@ else
   echo "Info: requirements.txt not found at $REQ_FILE; skipping dependency installation"
 fi
 
-su - devuser -c "cd /var/init_data/ && ./on-event-extension-install.sh &"
+LOG_DIR=/var/log/init
+mkdir -p "$LOG_DIR"
+nohup su - devuser -c 'cd /var/init_data/ && ./on-event-extension-install.sh' >"$LOG_DIR/on-event-extension-install.log" 2>&1 &
 
 echo "Starting ssh server..."
 
