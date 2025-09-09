@@ -1,0 +1,6 @@
+Given the following task description, provide up to three web search queries that would help the developer implement the task.
+If no useful information is needed from the web, return an empty list.
+Return the result as a JSON object with the key `queries`.
+
+Task description:
+{{ task_description }}

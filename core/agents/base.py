@@ -54,6 +54,15 @@ class BaseAgent:
         """Next state of the project (write-only)."""
         return self.state_manager.next_state
 
+    def prompt_context(self, **extra: Any) -> dict[str, Any]:
+        """Return common context variables for prompt templates."""
+        context = {
+            "docs": self.current_state.docs,
+            "web": self.current_state.web,
+        }
+        context.update(extra)
+        return context
+
     async def send_message(self, message: str, extra_info: Optional[str] = None):
         """
         Send a message to the user.

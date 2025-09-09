@@ -101,6 +101,9 @@ class Developer(ChatWithBreakdownMixin, RelevantFilesMixin, BaseAgent):
             # if the task is actually being done.
             return AgentResponse.external_docs_required(self)
 
+        if self.current_state.web is None and self.current_state.specification.complexity != Complexity.SIMPLE:
+            return AgentResponse.web_search_required(self)
+
         return await self.breakdown_current_task()
 
     async def breakdown_current_iteration(self) -> AgentResponse:
@@ -153,11 +156,12 @@ class Developer(ChatWithBreakdownMixin, RelevantFilesMixin, BaseAgent):
             AgentConvo(self)
             .template(
                 "iteration",
-                user_feedback=user_feedback,
-                user_feedback_qa=None,
-                next_solution_to_try=None,
-                docs=self.current_state.docs,
-                test_instructions=json.loads(current_task.get("test_instructions") or "[]"),
+                **self.prompt_context(
+                    user_feedback=user_feedback,
+                    user_feedback_qa=None,
+                    next_solution_to_try=None,
+                    test_instructions=json.loads(current_task.get("test_instructions") or "[]"),
+                ),
             )
             .assistant(description)
             .template("parse_task")
@@ -222,11 +226,12 @@ class Developer(ChatWithBreakdownMixin, RelevantFilesMixin, BaseAgent):
         llm = self.get_llm(TASK_BREAKDOWN_AGENT_NAME, stream_output=True)
         convo = AgentConvo(self).template(
             "breakdown",
-            task=current_task,
-            iteration=None,
-            current_task_index=current_task_index,
-            docs=self.current_state.docs,
-            related_api_endpoints=related_api_endpoints,
+            **self.prompt_context(
+                task=current_task,
+                iteration=None,
+                current_task_index=current_task_index,
+                related_api_endpoints=related_api_endpoints,
+            ),
         )
         response: str = await llm(convo)
         convo.assistant(response)

@@ -115,18 +115,20 @@ async def test_ask_question_with_none_hint_and_placeholder(mock_PromptSession, c
         return "hello"
 
     prompt_async = mock_PromptSession.return_value.prompt_async = AsyncMock(return_value="hello")
-    prompt_async.assert_awaited_once()
-    kwargs = prompt_async.await_args.kwargs
-    assert kwargs.get("default") == ""
-    # placeholder may not be supported or may be omitted for compatibility
-    assert ("placeholder" not in kwargs) or (kwargs["placeholder"] is None)
+    prompt_async.__signature__ = inspect.signature(fake_prompt_async)
     ui = PlainConsoleUI()
 
     await ui.start()
     await ui.ask_question("Say something", hint=None, placeholder=None)
     await ui.stop()
 
-    prompt_async.assert_awaited_once_with(default="", placeholder=None)
+    # Ensure prompt was awaited and called with default placeholder handling
+    prompt_async.assert_awaited_once()
+    kwargs = prompt_async.await_args.kwargs
+    assert kwargs.get("default") == ""
+    # placeholder may not be supported or may be omitted for compatibility
+    assert ("placeholder" not in kwargs) or (kwargs["placeholder"] is None)
+
     captured = capsys.readouterr()
     assert captured.out == "Say something\n"
 

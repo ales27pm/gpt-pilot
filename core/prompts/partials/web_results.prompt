@@ -1,0 +1,13 @@
+{% if web is defined and web %}
+We searched the web for additional information that might be useful for this task.
+
+---START_OF_WEB_RESULTS---
+{% for r in web %}
+Title: {{ r.title }}
+URL: {{ r.url }}
+Snippet: {{ r.snippet }}
+{% if r.content %}Content: {{ r.content[:500] }}{% endif %}
+
+{% endfor %}
+---END_OF_WEB_RESULTS---
+{% endif %}

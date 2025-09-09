@@ -72,11 +72,12 @@ class BugHunter(ChatWithBreakdownMixin, BaseAgent):
             AgentConvo(self)
             .template(
                 "get_bug_reproduction_instructions",
-                current_task=self.current_state.current_task,
-                user_feedback=self.current_state.current_iteration["user_feedback"],
-                user_feedback_qa=self.current_state.current_iteration["user_feedback_qa"],
-                docs=self.current_state.docs,
-                next_solution_to_try=None,
+                **self.prompt_context(
+                    current_task=self.current_state.current_task,
+                    user_feedback=self.current_state.current_iteration["user_feedback"],
+                    user_feedback_qa=self.current_state.current_iteration["user_feedback_qa"],
+                    next_solution_to_try=None,
+                ),
             )
             .require_schema(TestSteps)
         )
@@ -319,13 +320,14 @@ class BugHunter(ChatWithBreakdownMixin, BaseAgent):
     def generate_iteration_convo_so_far(self, omit_last_cycle=False):
         convo = AgentConvo(self).template(
             "iteration",
-            current_task=self.current_state.current_task,
-            user_feedback=self.current_state.current_iteration["user_feedback"],
-            user_feedback_qa=self.current_state.current_iteration["user_feedback_qa"],
-            docs=self.current_state.docs,
-            magic_words=magic_words,
-            next_solution_to_try=None,
-            test_instructions=json.loads(self.current_state.current_task.get("test_instructions") or "[]"),
+            **self.prompt_context(
+                current_task=self.current_state.current_task,
+                user_feedback=self.current_state.current_iteration["user_feedback"],
+                user_feedback_qa=self.current_state.current_iteration["user_feedback_qa"],
+                magic_words=magic_words,
+                next_solution_to_try=None,
+                test_instructions=json.loads(self.current_state.current_task.get("test_instructions") or "[]"),
+            ),
         )
 
         hunting_cycles = self.current_state.current_iteration.get("bug_hunting_cycles", [])[
