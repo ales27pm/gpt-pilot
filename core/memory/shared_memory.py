@@ -39,7 +39,11 @@ class SharedMemory:
     async def search(self, embedding: List[float], limit: int = 5) -> List[SharedMemoryModel]:
         self._validate_embedding(embedding)
         async with self.session_manager as session:
-            dialect = session.bind.dialect.name if session.bind is not None else ""
+            # Prefer engine dialect detection to avoid None bind on async sessions
+            try:
+                dialect = self.session_manager.engine.dialect.name
+            except Exception:
+                dialect = ""
             use_vector = Vector is not None and dialect == "postgresql"
             if use_vector:
                 stmt = (
