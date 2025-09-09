@@ -4,6 +4,8 @@ const messageEl = document.getElementById('message');
 function showMessage(text, type = 'info') {
   messageEl.textContent = text;
   messageEl.className = `message ${type}`;
+function showMessage(text, type = 'info') {
+  messageEl.className = `message ${type}`;
   if (type === 'error') {
     messageEl.setAttribute('role', 'alert');
     messageEl.setAttribute('aria-live', 'assertive');
@@ -11,6 +13,8 @@ function showMessage(text, type = 'info') {
     messageEl.setAttribute('role', 'status');
     messageEl.setAttribute('aria-live', 'polite');
   }
+  messageEl.textContent = text; // update after region is live & visible
+}
 }
 
 function clearMessage() {
