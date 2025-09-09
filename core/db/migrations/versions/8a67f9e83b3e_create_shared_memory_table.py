@@ -33,6 +33,19 @@ def upgrade() -> None:
         Vector(1536) if use_pgvector else sa.JSON(),
         nullable=False,
     )
+    op.create_table(
+        "shared_memory",
+        id_col,
+        sa.Column("agent_type", sa.String(length=50), nullable=False),
+        sa.Column("content", sa.Text(), nullable=False),
+        embedding_col,
+    )
+    if use_pgvector:  # pragma: no branch
+        op.create_check_constraint(
+            "ck_shared_memory_embedding_dims",
+            "shared_memory",
+            "vector_dims(embedding) = 1536",
+        )
 
     op.create_table(
         "shared_memory",
