@@ -20,6 +20,7 @@ from core.proc.exec_log import ExecLog as ExecLogData
 from core.telemetry import telemetry
 from core.ui.base import UIBase
 from core.ui.base import UserInput as UserInputData
+
 try:  # optional memory
     from core.memory import SharedMemory
 except Exception:  # pragma: no cover

@@ -6,7 +6,7 @@ from core.state.state_manager import StateManager
 from core.templates.registry import PROJECT_TEMPLATES
 
 
-@pytest.mark.skip
+@pytest.mark.skip(reason="Project templates unavailable")
 @pytest.mark.asyncio
 @patch("core.state.state_manager.get_config")
 async def test_render_react_express_sql(mock_get_config, testmanager):
@@ -31,7 +31,7 @@ async def test_render_react_express_sql(mock_get_config, testmanager):
     assert "api/models/user.js" not in files
 
 
-@pytest.mark.skip
+@pytest.mark.skip(reason="Project templates unavailable")
 @pytest.mark.asyncio
 @patch("core.state.state_manager.get_config")
 async def test_render_react_express_nosql(mock_get_config, testmanager):
@@ -51,13 +51,12 @@ async def test_render_react_express_nosql(mock_get_config, testmanager):
     await template.apply()
 
     files = sm.file_system.list()
-    print(files)
     for f in ["server.js", "index.html", "api/models/user.js", "api/routes/authRoutes.js", "ui/pages/Register.jsx"]:
         assert f in files
     assert "prisma/schema.prisma" not in files
 
 
-@pytest.mark.skip
+@pytest.mark.skip(reason="Project templates unavailable")
 @pytest.mark.asyncio
 @patch("core.state.state_manager.get_config")
 async def test_render_node_express_mongoose(mock_get_config, testmanager):

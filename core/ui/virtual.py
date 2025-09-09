@@ -1,7 +1,7 @@
 from typing import Optional
 
 from core.log import get_logger
-from core.ui.base import UIBase, UISource, UserInput
+from core.ui.base import JSONDict, JSONList, UIBase, UISource, UserInput
 
 log = get_logger(__name__)
 
@@ -101,14 +101,14 @@ class VirtualUI(UIBase):
         else:
             return UserInput(text="")
 
-    async def send_project_stage(self, data: dict):
+    async def send_project_stage(self, data: JSONDict) -> None:
         pass
 
     async def send_epics_and_tasks(
         self,
-        epics: list[dict],
-        tasks: list[dict],
-    ):
+        epics: JSONList | None = None,
+        tasks: JSONList | None = None,
+    ) -> None:
         pass
 
     async def send_task_progress(
@@ -119,29 +119,29 @@ class VirtualUI(UIBase):
         source: str,
         status: str,
         source_index: int = 1,
-        tasks: list[dict] = None,
-    ):
+        tasks: JSONList | None = None,
+    ) -> None:
         pass
 
     async def send_step_progress(
         self,
         index: int,
         n_steps: int,
-        step: dict,
+        step: JSONDict,
         task_source: str,
-    ):
+    ) -> None:
         pass
 
     async def send_data_about_logs(
         self,
-        data_about_logs: dict,
-    ):
+        data_about_logs: JSONDict,
+    ) -> None:
         pass
 
     async def send_modified_files(
         self,
-        modified_files: dict[str, str, str],
-    ):
+        modified_files: JSONList,
+    ) -> None:
         pass
 
     async def send_run_command(self, run_command: str):
@@ -162,16 +162,16 @@ class VirtualUI(UIBase):
     async def start_breakdown_stream(self):
         pass
 
-    async def send_project_stats(self, stats: dict):
+    async def send_project_stats(self, stats: JSONDict) -> None:
         pass
 
     async def send_test_instructions(self, test_instructions: str, project_state_id: Optional[str] = None):
         pass
 
-    async def knowledge_base_update(self, knowledge_base: dict):
+    async def knowledge_base_update(self, knowledge_base: JSONDict) -> None:
         pass
 
-    async def send_file_status(self, file_path: str, file_status: str, source: Optional[UISource] = None):
+    async def send_file_status(self, file_path: str, file_status: str, source: Optional[UISource] = None) -> None:
         pass
 
     async def send_bug_hunter_status(self, status: str, num_cycles: int):

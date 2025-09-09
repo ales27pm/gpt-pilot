@@ -44,15 +44,12 @@ class ExternalDocumentation(BaseAgent):
     display_name = "Documentation"
 
     async def run(self) -> AgentResponse:
-        await self._store_docs([], [])
-        return AgentResponse.done(self)
-
         if self.current_state.specification.example_project:
-            log.debug("Example project detected, no documentation selected.")
-            available_docsets = []
-        else:
-            available_docsets = await self._get_available_docsets()
+            log.debug("Example project detected, skipping external documentation.")
+            await self._store_docs([], [])
+            return AgentResponse.done(self)
 
+        available_docsets = await self._get_available_docsets()
         selected_docsets = await self._select_docsets(available_docsets)
         await telemetry.trace_code_event("docsets_used", selected_docsets)
 

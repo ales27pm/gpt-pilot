@@ -19,6 +19,7 @@ NONBLOCK_READ_TIMEOUT = 0.01
 BUSY_WAIT_INTERVAL = 0.1
 WATCHER_IDLE_INTERVAL = 1.0
 MAX_COMMAND_TIMEOUT = 180
+KILL_WAIT_TIMEOUT = 5
 
 
 @dataclass
@@ -74,8 +75,14 @@ class LocalProcess:
         except asyncio.TimeoutError:
             log.debug(f"Process {self.cmd} still running after {timeout}s, terminating")
             await self.terminate()
-            # FIXME: this may still hang if we don't manage to kill the process.
-            retcode = await self._process.wait()
+            try:
+                retcode = await asyncio.wait_for(self._process.wait(), KILL_WAIT_TIMEOUT)
+            except asyncio.TimeoutError:
+                log.warning(
+                    "Process %s did not exit after SIGKILL; forcing return code -1",
+                    self.cmd,
+                )
+                retcode = -1
 
         return retcode
 

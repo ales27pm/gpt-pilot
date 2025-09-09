@@ -1,7 +1,8 @@
+import asyncio
 from os import getenv, makedirs
 from os.path import join
 from sys import platform
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from psutil import Process
@@ -9,7 +10,6 @@ from psutil import Process
 from core.proc.process_manager import LocalProcess, ProcessManager
 
 
-@pytest.mark.skip
 @pytest.mark.asyncio
 async def test_local_process_start_terminate(tmp_path):
     cmd = "timeout 5" if platform == "win32" else "sleep 5"
@@ -51,6 +51,34 @@ async def test_local_process_wait(tmp_path):
 
     await lp.wait(0.1)
     assert not p.is_running()
+
+
+@pytest.mark.asyncio
+@patch("core.proc.process_manager.KILL_WAIT_TIMEOUT", 0.1)
+async def test_local_process_wait_handles_unresponsive_process(tmp_path):
+    cmd = "timeout 5" if platform == "win32" else "sleep 5"
+
+    lp = await LocalProcess.start(
+        cmd,
+        cwd=tmp_path,
+        env={"PATH": getenv("PATH")},
+        bg=False,
+    )
+
+    orig_wait = lp._process.wait
+
+    async def never_exit():
+        await asyncio.sleep(10)
+
+    lp._process.wait = AsyncMock(side_effect=never_exit)
+
+    with patch.object(LocalProcess, "terminate", AsyncMock()) as term:
+        ret = await lp.wait(0.1)
+        assert ret == -1
+        term.assert_awaited()
+
+    lp._process.kill()
+    await orig_wait()
 
 
 @pytest.mark.asyncio

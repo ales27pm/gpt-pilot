@@ -187,11 +187,16 @@ class JSONParser:
         ExtendedModel = create_model(
             f"Extended{self.spec.__name__}",
             original_response=(str, ...),
-            **{field_name: (field.annotation, field.default) for field_name, field in self.spec.__fields__.items()},
+            **{
+                field_name: (field.annotation, field.default)
+                for field_name, field in self.spec.model_fields.items()
+            },
         )
 
         # Instantiate the extended model
-        extended_model = ExtendedModel(original_response=self.original_response, **model.dict())
+        extended_model = ExtendedModel(
+            original_response=self.original_response, **model.model_dump()
+        )
 
         return extended_model
 

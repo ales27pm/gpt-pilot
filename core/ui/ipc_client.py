@@ -8,7 +8,7 @@ from pydantic import BaseModel, ValidationError
 
 from core.config import LocalIPCConfig
 from core.log import get_logger
-from core.ui.base import UIBase, UIClosedError, UISource, UserInput
+from core.ui.base import JSONDict, JSONList, UIBase, UIClosedError, UISource, UserInput
 
 VSCODE_EXTENSION_HOST = "localhost"
 VSCODE_EXTENSION_PORT = 8125
@@ -356,14 +356,14 @@ class IPCClientUI(UIBase):
         # Empty answer which we don't allow, treat as user cancelled the input
         return UserInput(cancelled=True)
 
-    async def send_project_stage(self, data: dict):
+    async def send_project_stage(self, data: JSONDict) -> None:
         await self._send(MessageType.INFO, content=json.dumps(data))
 
     async def send_epics_and_tasks(
         self,
-        epics: list[dict],
-        tasks: list[dict],
-    ):
+        epics: JSONList | None = None,
+        tasks: JSONList | None = None,
+    ) -> None:
         await self._send(
             MessageType.EPICS_AND_TASKS,
             content={
@@ -380,8 +380,8 @@ class IPCClientUI(UIBase):
         source: str,
         status: str,
         source_index: int = 1,
-        tasks: list[dict] = None,
-    ):
+        tasks: JSONList | None = None,
+    ) -> None:
         await self._send(
             MessageType.PROGRESS,
             content={
@@ -399,8 +399,8 @@ class IPCClientUI(UIBase):
 
     async def send_modified_files(
         self,
-        modified_files: dict[str, str, str],
-    ):
+        modified_files: JSONList,
+    ) -> None:
         await self._send(
             MessageType.MODIFIED_FILES,
             content={"files": modified_files},
@@ -410,9 +410,9 @@ class IPCClientUI(UIBase):
         self,
         index: int,
         n_steps: int,
-        step: dict,
+        step: JSONDict,
         task_source: str,
-    ):
+    ) -> None:
         await self._send(
             MessageType.PROGRESS,
             content={
@@ -427,7 +427,7 @@ class IPCClientUI(UIBase):
 
     async def send_data_about_logs(
         self,
-        data_about_logs: dict,
+        data_about_logs: JSONDict,
     ):
         await self._send(
             MessageType.DEBUGGING_LOGS,
@@ -475,7 +475,7 @@ class IPCClientUI(UIBase):
             content={},
         )
 
-    async def send_project_stats(self, stats: dict):
+    async def send_project_stats(self, stats: JSONDict):
         await self._send(
             MessageType.PROJECT_STATS,
             content=stats,
@@ -497,7 +497,7 @@ class IPCClientUI(UIBase):
             project_state_id=project_state_id,
         )
 
-    async def knowledge_base_update(self, knowledge_base: dict):
+    async def knowledge_base_update(self, knowledge_base: JSONDict):
         log.debug("Sending updated knowledge base")
 
         await self._send(

@@ -13,6 +13,7 @@ from .project import Project
 from .project_state import ProjectState
 from .specification import Complexity, Specification
 from .user_input import UserInput
+
 try:  # pragma: no cover - optional dependency
     from .shared_memory import SharedMemory
 except Exception:  # pragma: no cover
