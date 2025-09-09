@@ -20,6 +20,8 @@ su - devuser -c "mkdir -p $DB_DIR"
 
 set -e
 
+pip install --no-cache-dir -r "$(dirname "$0")/requirements.txt"
+
 su - devuser -c "cd /var/init_data/ && ./on-event-extension-install.sh &"
 
 echo "Starting ssh server..."
