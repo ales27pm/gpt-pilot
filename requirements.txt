@@ -34,3 +34,6 @@ tqdm==4.67.1
 typing-extensions==4.12.2
 urllib3==2.2.3
 wcwidth==0.2.13
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+pgvector==0.2.5

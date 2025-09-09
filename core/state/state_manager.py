@@ -20,6 +20,10 @@ from core.proc.exec_log import ExecLog as ExecLogData
 from core.telemetry import telemetry
 from core.ui.base import UIBase
 from core.ui.base import UserInput as UserInputData
+try:  # optional memory
+    from core.memory import SharedMemory
+except Exception:  # pragma: no cover
+    SharedMemory = None
 
 if TYPE_CHECKING:
     from core.agents.base import BaseAgent
@@ -53,6 +57,10 @@ class StateManager:
         self.git_available = False
         self.git_used = False
         self.options = {}
+        if SharedMemory is not None:
+            self.shared_memory = SharedMemory(session_manager)
+        else:  # pragma: no cover - memory not available
+            self.shared_memory = None
 
     @asynccontextmanager
     async def db_blocker(self):

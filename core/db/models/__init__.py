@@ -13,6 +13,10 @@ from .project import Project
 from .project_state import ProjectState
 from .specification import Complexity, Specification
 from .user_input import UserInput
+try:  # pragma: no cover - optional dependency
+    from .shared_memory import SharedMemory
+except Exception:  # pragma: no cover
+    SharedMemory = None
 
 __all__ = [
     "Base",
@@ -27,3 +31,6 @@ __all__ = [
     "Specification",
     "UserInput",
 ]
+
+if SharedMemory is not None:  # pragma: no cover - optional dependency
+    __all__.append("SharedMemory")

@@ -42,6 +42,7 @@ class BaseAgent:
         self.step = step
         self.data = data
         self.args = args
+        self.memory = state_manager.shared_memory
 
     @property
     def current_state(self) -> ProjectState:
