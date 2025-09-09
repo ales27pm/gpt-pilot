@@ -4,11 +4,20 @@ const messageEl = document.getElementById('message');
 function showMessage(text, type = 'info') {
   messageEl.textContent = text;
   messageEl.className = `message ${type}`;
+  if (type === 'error') {
+    messageEl.setAttribute('role', 'alert');
+    messageEl.setAttribute('aria-live', 'assertive');
+  } else {
+    messageEl.setAttribute('role', 'status');
+    messageEl.setAttribute('aria-live', 'polite');
+  }
 }
 
 function clearMessage() {
   messageEl.textContent = '';
   messageEl.className = 'message hidden';
+  messageEl.removeAttribute('role');
+  messageEl.setAttribute('aria-live', 'polite');
 }
 
 async function loadProjects() {
@@ -33,6 +42,7 @@ async function loadProjects() {
         header.appendChild(title);
         const del = document.createElement('button');
         del.textContent = 'Delete';
+        del.setAttribute('aria-label', `Delete project ${project.name}`);
         del.addEventListener('click', () => deleteProject(project.id, project.name));
         header.appendChild(del);
         item.appendChild(header);
