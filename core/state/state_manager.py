@@ -22,8 +22,9 @@ from core.ui.base import UIBase
 from core.ui.base import UserInput as UserInputData
 
 try:  # optional memory
-    from core.memory import SharedMemory
+    from core.memory import ContextEngine, SharedMemory
 except Exception:  # pragma: no cover
+    ContextEngine = None  # type: ignore
     SharedMemory = None
 
 if TYPE_CHECKING:
@@ -60,8 +61,10 @@ class StateManager:
         self.options = {}
         if SharedMemory is not None:
             self.shared_memory = SharedMemory(session_manager)
+            self.context_engine = ContextEngine(self.shared_memory) if ContextEngine else None
         else:  # pragma: no cover - memory not available
             self.shared_memory = None
+            self.context_engine = None
 
     @asynccontextmanager
     async def db_blocker(self):

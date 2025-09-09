@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GPT Pilot Frontend</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header class="top-bar">
+    <h1>GPT Pilot Projects</h1>
+    <button id="refresh">Refresh</button>
+  </header>
+  <main class="container">
+    <form id="create-form" class="create">
+      <input id="new-name" type="text" placeholder="New project name" />
+      <button type="submit">Create</button>
+    </form>
+    <p id="message" class="message hidden"></p>
+    <ul id="projects" class="project-list"></ul>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

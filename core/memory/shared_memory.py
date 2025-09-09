@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import List
+from typing import List, Tuple
 
+import sqlalchemy as sa
 from sqlalchemy import select
 
 from core.db.models.shared_memory import SharedMemory as SharedMemoryModel
@@ -22,37 +23,41 @@ class SharedMemory:
 
     def _validate_embedding(self, embedding: List[float]):
         if len(embedding) != self.embedding_dim:
-            raise ValueError(
-                f"Embedding length must be {self.embedding_dim}, got {len(embedding)}"
-            )
+            raise ValueError(f"Embedding length must be {self.embedding_dim}, got {len(embedding)}")
 
     async def add(self, agent_type: str, content: str, embedding: List[float]):
         self._validate_embedding(embedding)
         async with self.session_manager as session:
-            record = SharedMemoryModel(
-                agent_type=agent_type, content=content, embedding=embedding
-            )
+            record = SharedMemoryModel(agent_type=agent_type, content=content, embedding=embedding)
             session.add(record)
             await session.commit()
             return record
 
-    async def search(self, embedding: List[float], limit: int = 5) -> List[SharedMemoryModel]:
+    async def search_with_scores(self, embedding: List[float], limit: int = 5) -> List[Tuple[SharedMemoryModel, float]]:
+        """Return records with their cosine distances for advanced scoring."""
+
         self._validate_embedding(embedding)
         async with self.session_manager as session:
-            # Prefer engine dialect detection to avoid None bind on async sessions
             try:
                 dialect = self.session_manager.engine.dialect.name
             except Exception:
                 dialect = ""
-            # Detect pgvector by attribute presence on the column expression
             embedding_col = SharedMemoryModel.embedding
             if hasattr(embedding_col, "cosine_distance") and dialect == "postgresql":
                 stmt = (
-                    select(SharedMemoryModel)
-                    .order_by(embedding_col.cosine_distance(embedding))
+                    select(SharedMemoryModel, embedding_col.cosine_distance(embedding).label("dist"))
+                    .order_by("dist")
                     .limit(limit)
                 )
             else:
-                stmt = select(SharedMemoryModel).order_by(SharedMemoryModel.id.desc()).limit(limit)
+                stmt = (
+                    select(SharedMemoryModel, sa.literal(1.0).label("dist"))
+                    .order_by(SharedMemoryModel.id.desc())
+                    .limit(limit)
+                )
             result = await session.execute(stmt)
-            return list(result.scalars())
+            return [(row[0], float(row[1])) for row in result]
+
+    async def search(self, embedding: List[float], limit: int = 5) -> List[SharedMemoryModel]:
+        results = await self.search_with_scores(embedding, limit)
+        return [record for record, _ in results]
