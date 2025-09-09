@@ -4,7 +4,7 @@ from typing import List
 
 from sqlalchemy import select
 
-from core.db.models.shared_memory import SharedMemory as SharedMemoryModel, Vector
+from core.db.models.shared_memory import SharedMemory as SharedMemoryModel
 from core.db.session import SessionManager
 
 
@@ -44,11 +44,15 @@ class SharedMemory:
                 dialect = self.session_manager.engine.dialect.name
             except Exception:
                 dialect = ""
-            use_vector = Vector is not None and dialect == "postgresql"
-            if use_vector:
+            # Detect pgvector by attribute presence on the column expression
+            embedding_col = SharedMemoryModel.embedding
+            if (
+                use_vector := hasattr(embedding_col, "cosine_distance")
+                and dialect == "postgresql"
+            ):
                 stmt = (
                     select(SharedMemoryModel)
-                    .order_by(SharedMemoryModel.embedding.cosine_distance(embedding))
+                    .order_by(embedding_col.cosine_distance(embedding))
                     .limit(limit)
                 )
             else:
