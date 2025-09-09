@@ -62,6 +62,25 @@ class PlainConsoleUI(UIBase):
     ):
         pass
 
+    def _print_question(
+        self,
+        question: str,
+        hint: Optional[str],
+        buttons: Optional[dict[str, str]],
+        default: Optional[str],
+        source: Optional[UISource],
+    ) -> None:
+        if source:
+            print(f"[{source}] {question}")
+        else:
+            print(question)
+        if hint:
+            print(f"Hint: {hint}")
+        if buttons:
+            for k, v in buttons.items():
+                default_str = " (default)" if k == default else ""
+                print(f"  [{k}]: {v}{default_str}")
+
     async def ask_question(
         self,
         question: str,
@@ -79,28 +98,37 @@ class PlainConsoleUI(UIBase):
         extra_info: Optional[str] = None,
         placeholder: Optional[str] = None,
     ) -> UserInput:
+        """Prompt user with a question and return their response.
+
+        Args:
+            question: The question text to display.
+            buttons: Optional mapping of button keys to descriptions.
+            default: Default button key or text if user submits empty input.
+            buttons_only: If True, only button choices are allowed.
+            allow_empty: Allow empty text responses.
+            full_screen: Unused placeholder for UI compatibility.
+            hint: Optional helper text displayed under the question.
+            verbose: If False, suppress printing of question, hint, and buttons.
+            initial_text: Pre-populated text in the prompt.
+            source: Optional source of the question printed in brackets.
+            project_state_id: Unused project state identifier.
+            extra_info: Additional info not used by this UI.
+            placeholder: Placeholder text shown in the prompt input field.
+        """
         if verbose:
-            if source:
-                print(f"[{source}] {question}")
-            else:
-                print(f"{question}")
-
-            if hint:
-                print(f"Hint: {hint}")
-
-            if buttons:
-                for k, v in buttons.items():
-                    default_str = " (default)" if k == default else ""
-                    print(f"  [{k}]: {v}{default_str}")
+            self._print_question(question, hint, buttons, default, source)
 
         session = PromptSession("> ")
 
         while True:
             try:
-                choice = await session.prompt_async(
-                    default=initial_text or "",
-                    placeholder=placeholder,
-                )
+                try:
+                    choice = await session.prompt_async(
+                        default=initial_text or "",
+                        placeholder=placeholder,
+                    )
+                except TypeError:
+                    choice = await session.prompt_async(default=initial_text or "")
                 choice = choice.strip()
             except KeyboardInterrupt:
                 raise UIClosedError()

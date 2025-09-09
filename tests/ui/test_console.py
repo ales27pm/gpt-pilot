@@ -1,7 +1,6 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
-
 from core.ui.base import AgentSource, UIClosedError
 from core.ui.console import PlainConsoleUI
 
@@ -102,6 +101,57 @@ async def test_ask_question_with_hint_and_placeholder(mock_PromptSession, capsys
     prompt_async.assert_awaited_once_with(default="", placeholder="type here")
     captured = capsys.readouterr()
     assert captured.out == "Say something\nHint: be polite\n"
+
+
+@pytest.mark.asyncio
+@patch("core.ui.console.PromptSession")
+async def test_ask_question_with_none_hint_and_placeholder(mock_PromptSession, capsys):
+    prompt_async = mock_PromptSession.return_value.prompt_async = AsyncMock(return_value="hello")
+    ui = PlainConsoleUI()
+
+    await ui.start()
+    await ui.ask_question("Say something", hint=None, placeholder=None)
+    await ui.stop()
+
+    prompt_async.assert_awaited_once_with(default="", placeholder=None)
+    captured = capsys.readouterr()
+    assert captured.out == "Say something\n"
+
+
+@pytest.mark.asyncio
+@patch("core.ui.console.PromptSession")
+async def test_ask_question_with_empty_hint_and_placeholder(mock_PromptSession, capsys):
+    prompt_async = mock_PromptSession.return_value.prompt_async = AsyncMock(return_value="hello")
+    ui = PlainConsoleUI()
+
+    await ui.start()
+    await ui.ask_question("Say something", hint="", placeholder="")
+    await ui.stop()
+
+    prompt_async.assert_awaited_once_with(default="", placeholder="")
+    captured = capsys.readouterr()
+    assert captured.out == "Say something\n"
+
+
+@pytest.mark.asyncio
+@patch("core.ui.console.PromptSession")
+async def test_ask_question_with_hint_and_buttons(mock_PromptSession, capsys):
+    prompt_async = mock_PromptSession.return_value.prompt_async = AsyncMock(return_value="yes")
+    ui = PlainConsoleUI()
+
+    await ui.start()
+    buttons = {"yes": "Yes", "no": "No"}
+    await ui.ask_question(
+        "Confirm?",
+        buttons=buttons,
+        hint="choose wisely",
+        default="yes",
+    )
+    await ui.stop()
+
+    prompt_async.assert_awaited_once_with(default="", placeholder=None)
+    captured = capsys.readouterr()
+    assert captured.out == "Confirm?\nHint: choose wisely\n  [yes]: Yes (default)\n  [no]: No\n"
 
 
 @pytest.mark.asyncio
