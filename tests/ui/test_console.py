@@ -86,3 +86,35 @@ async def test_ask_question_interrupted(mock_PromptSession):
     await ui.stop()
 
     prompt_async.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@patch("core.ui.console.PromptSession")
+async def test_ask_question_with_hint_and_placeholder(mock_PromptSession, capsys):
+    prompt_async = mock_PromptSession.return_value.prompt_async = AsyncMock(return_value="hello")
+    ui = PlainConsoleUI()
+
+    await ui.start()
+    await ui.ask_question("Say something", hint="be polite", placeholder="type here")
+
+    await ui.stop()
+
+    prompt_async.assert_awaited_once_with(default="", placeholder="type here")
+    captured = capsys.readouterr()
+    assert captured.out == "Say something\nHint: be polite\n"
+
+
+@pytest.mark.asyncio
+@patch("core.ui.console.PromptSession")
+async def test_ask_question_non_verbose(mock_PromptSession, capsys):
+    prompt_async = mock_PromptSession.return_value.prompt_async = AsyncMock(return_value="ignored")
+    ui = PlainConsoleUI()
+
+    await ui.start()
+    await ui.ask_question("Should not print", verbose=False)
+
+    await ui.stop()
+
+    prompt_async.assert_awaited_once_with(default="", placeholder=None)
+    captured = capsys.readouterr()
+    assert captured.out == ""

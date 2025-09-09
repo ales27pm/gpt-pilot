@@ -79,21 +79,28 @@ class PlainConsoleUI(UIBase):
         extra_info: Optional[str] = None,
         placeholder: Optional[str] = None,
     ) -> UserInput:
-        if source:
-            print(f"[{source}] {question}")
-        else:
-            print(f"{question}")
+        if verbose:
+            if source:
+                print(f"[{source}] {question}")
+            else:
+                print(f"{question}")
 
-        if buttons:
-            for k, v in buttons.items():
-                default_str = " (default)" if k == default else ""
-                print(f"  [{k}]: {v}{default_str}")
+            if hint:
+                print(f"Hint: {hint}")
+
+            if buttons:
+                for k, v in buttons.items():
+                    default_str = " (default)" if k == default else ""
+                    print(f"  [{k}]: {v}{default_str}")
 
         session = PromptSession("> ")
 
         while True:
             try:
-                choice = await session.prompt_async(default=initial_text or "")
+                choice = await session.prompt_async(
+                    default=initial_text or "",
+                    placeholder=placeholder,
+                )
                 choice = choice.strip()
             except KeyboardInterrupt:
                 raise UIClosedError()
