@@ -12,9 +12,20 @@ class OllamaClient(BaseLLMClient):
 
     provider = LLMProvider.OLLAMA
 
-    def _init_client(self):
-        self.client = AsyncClient(host=self.config.base_url or "http://localhost:11434")
+# core/llm/ollama_client.py
 
+from core.config import LLMProvider
+import httpx
+
+    def _init_client(self):
+        timeout = httpx.Timeout(
+            connect=self.config.connect_timeout,
+            read=self.config.read_timeout,
+        )
+        self.client = AsyncClient(
+            host=self.config.base_url or "http://localhost:11434",
+            timeout=timeout,
+        )
     async def _make_request(
         self,
         convo: Convo,
