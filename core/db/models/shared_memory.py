@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from typing import List, Union
-from uuid import UUID, uuid4
+from typing import List
+from uuid import uuid4
 
 import sqlalchemy as sa
 from sqlalchemy import JSON, String, Text
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import Base
@@ -24,11 +23,16 @@ def _dialect_name() -> str:
         return ""
 
 
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-
 # Always use string UUIDs at ORM level to avoid premature dialect binding issues.
 _ID_TYPE = String(36)
-_ID_DEFAULT = lambda: str(uuid4())
+
+
+def _generate_id() -> str:
+    """Return a random UUID4 string."""
+    return str(uuid4())
+
+
+_ID_DEFAULT = _generate_id
 
 # Store embeddings in JSON at ORM level; pgvector specifics handled in migrations.
 Vector = None  # type: ignore
@@ -44,9 +48,10 @@ class SharedMemory(Base):
         _ID_TYPE,
         primary_key=True,
         default=_ID_DEFAULT,
-        server_default=sa.text("gen_random_uuid()")  # safe on Postgres; ignored elsewhere
+        # Rely on SQLAlchemy's Python-side default generation for cross-dialect
+        # compatibility. PostgreSQL uses `gen_random_uuid()` via migrations, but
+        # emitting it here would break SQLite tests.
     )
     agent_type: Mapped[str] = mapped_column(String(50), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     embedding: Mapped[List[float]] = mapped_column(_EMBEDDING_TYPE, nullable=False)
-
