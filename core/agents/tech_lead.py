@@ -49,6 +49,28 @@ class TechLead(RelevantFilesMixin, BaseAgent):
     agent_type = "tech-lead"
     display_name = "Tech Lead"
 
+    def _build_epic(
+        self,
+        name: str,
+        description: str,
+        source: str,
+        *,
+        complexity=None,
+        completed: bool = False,
+    ) -> dict:
+        """Return a new epic dictionary for the project state."""
+        return {
+            "id": uuid4().hex,
+            "name": name,
+            "source": source,
+            "description": description,
+            "test_instructions": None,
+            "summary": None,
+            "completed": completed,
+            "complexity": complexity,
+            "sub_epics": [],
+        }
+
     async def run(self) -> AgentResponse:
         state = self.current_state
         # When there are no epics yet, create the initial project epic
@@ -78,17 +100,12 @@ class TechLead(RelevantFilesMixin, BaseAgent):
 
     def create_initial_project_epic(self):
         log.debug("Creating initial project Epic")
-        new_epic = {
-            "id": uuid4().hex,
-            "name": "Initial Project",
-            "source": "app",
-            "description": self.current_state.specification.description,
-            "test_instructions": None,
-            "summary": None,
-            "completed": False,
-            "complexity": self.current_state.specification.complexity,
-            "sub_epics": [],
-        }
+        new_epic = self._build_epic(
+            "Initial Project",
+            self.current_state.specification.description,
+            "app",
+            complexity=self.current_state.specification.complexity,
+        )
         self.next_state.epics = self.current_state.epics + [new_epic]
         self.next_state.relevant_files = None
         self.next_state.modified_files = {}
@@ -150,19 +167,12 @@ class TechLead(RelevantFilesMixin, BaseAgent):
             return AgentResponse.exit(self)
 
         feature_description = response.text
-        self.next_state.epics = self.current_state.epics + [
-            {
-                "id": uuid4().hex,
-                "name": f"Feature #{len(self.current_state.epics)}",
-                "test_instructions": None,
-                "source": "feature",
-                "description": feature_description,
-                "summary": None,
-                "completed": False,
-                "complexity": None,  # Determined and defined in SpecWriter
-                "sub_epics": [],
-            }
-        ]
+        new_epic = self._build_epic(
+            f"Feature #{len(self.current_state.epics)}",
+            feature_description,
+            "feature",
+        )
+        self.next_state.epics = self.current_state.epics + [new_epic]
         # Orchestrator will rerun us to break down the new feature epic
         self.next_state.action = f"Start of feature #{len(self.current_state.epics)}"
         return AgentResponse.update_specification(self, feature_description)
