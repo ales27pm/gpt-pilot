@@ -698,6 +698,15 @@ class StateManager:
 
                 description = line.split(":", 1)[1].strip()
                 data = {"endpoint": "", "request": "", "response": ""}
+                # Scan subsequent lines for metadata in any order
+                for next_line in lines[i+1:]:
+                    next_line = next_line.strip()
+                    if next_line.startswith("// Description:"):
+                        break  # Stop if a new description starts
+                    for key in ["Endpoint", "Request", "Response"]:
+                        prefix = f"// {key}:"
+                        if next_line.startswith(prefix):
+                            data[key.lower()] = next_line.split(":", 1)[1].strip()
                 for next_line in lines[i + 1 :]:
                     next_line = next_line.strip()
                     if next_line.startswith("// Description:"):
