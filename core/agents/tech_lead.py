@@ -49,37 +49,34 @@ class TechLead(RelevantFilesMixin, BaseAgent):
     agent_type = "tech-lead"
     display_name = "Tech Lead"
 
+    def _build_epic(
+        self,
+        name: str,
+        description: str,
+        source: str,
+        *,
+        complexity=None,
+        completed: bool = False,
+    ) -> dict:
+        """Return a new epic dictionary for the project state."""
+        return {
+            "id": uuid4().hex,
+            "name": name,
+            "source": source,
+            "description": description,
+            "test_instructions": None,
+            "summary": None,
+            "completed": completed,
+            "complexity": complexity,
+            "sub_epics": [],
+        }
+
     async def run(self) -> AgentResponse:
         state = self.current_state
-
-# --- core/agents/tech_lead.py
-
-# 1) In plan_epic(...), use the passed-in epic instead of current_state.current_epic
-     def plan_epic(self, epic, ...):
-         # ...
-        task_type=epic.get("source", "app"),
-         # ...
-
-# 2) In create_initial_project_epic(), record the new epic as current_epic
-     def create_initial_project_epic(self):
-         log.debug("Creating initial project Epic")
--        self.next_state.epics = self.current_state.epics + [
-        new_epic = {
-             "id": uuid4().hex,
-             "name": "Initial Project",
-             "source": "app",
-             "description": self.current_state.specification.description,
-             "test_instructions": None,
-             "summary": None,
-             "completed": False,
-             "complexity": self.current_state.specification.complexity,
-             "sub_epics": [],
--            }
-        }
-        self.next_state.epics = self.current_state.epics + [new_epic]
-        self.next_state.current_epic = new_epic
-         self.next_state.relevant_files = None
-         self.next_state.modified_files = {}
+        # When there are no epics yet, create the initial project epic
+        if not state.epics:
+            self.create_initial_project_epic()
+            return AgentResponse.done(self)
         # Building frontend is the first epic - if the only epic is completed, start the initial project
         if len(state.epics) == 1 and state.epics[0].get("completed"):
             self.create_initial_project_epic()
@@ -103,19 +100,13 @@ class TechLead(RelevantFilesMixin, BaseAgent):
 
     def create_initial_project_epic(self):
         log.debug("Creating initial project Epic")
-        self.next_state.epics = self.current_state.epics + [
-            {
-                "id": uuid4().hex,
-                "name": "Initial Project",
-                "source": "app",
-                "description": self.current_state.specification.description,
-                "test_instructions": None,
-                "summary": None,
-                "completed": False,
-                "complexity": self.current_state.specification.complexity,
-                "sub_epics": [],
-            }
-        ]
+        new_epic = self._build_epic(
+            "Initial Project",
+            self.current_state.specification.description,
+            "app",
+            complexity=self.current_state.specification.complexity,
+        )
+        self.next_state.epics = self.current_state.epics + [new_epic]
         self.next_state.relevant_files = None
         self.next_state.modified_files = {}
 
@@ -176,19 +167,12 @@ class TechLead(RelevantFilesMixin, BaseAgent):
             return AgentResponse.exit(self)
 
         feature_description = response.text
-        self.next_state.epics = self.current_state.epics + [
-            {
-                "id": uuid4().hex,
-                "name": f"Feature #{len(self.current_state.epics)}",
-                "test_instructions": None,
-                "source": "feature",
-                "description": feature_description,
-                "summary": None,
-                "completed": False,
-                "complexity": None,  # Determined and defined in SpecWriter
-                "sub_epics": [],
-            }
-        ]
+        new_epic = self._build_epic(
+            f"Feature #{len(self.current_state.epics)}",
+            feature_description,
+            "feature",
+        )
+        self.next_state.epics = self.current_state.epics + [new_epic]
         # Orchestrator will rerun us to break down the new feature epic
         self.next_state.action = f"Start of feature #{len(self.current_state.epics)}"
         return AgentResponse.update_specification(self, feature_description)
@@ -206,8 +190,7 @@ class TechLead(RelevantFilesMixin, BaseAgent):
             .template(
                 "plan",
                 epic=epic,
-                task_type=self.current_state.current_epic.get("source", "app"),
-                # FIXME: we're injecting summaries to initial description
+                task_type=epic.get("source", "app"),
                 existing_summary=None,
                 get_only_api_files=True,
             )
@@ -224,7 +207,7 @@ class TechLead(RelevantFilesMixin, BaseAgent):
 
         if epic.get("source") == "feature" or epic.get("complexity") == Complexity.SIMPLE:
             await self.send_message(f"Epic 1: {epic['name']}")
-            self.next_state.current_epic["sub_epics"] = [
+            epic["sub_epics"] = [
                 {
                     "id": 1,
                     "description": epic["name"],
@@ -243,7 +226,7 @@ class TechLead(RelevantFilesMixin, BaseAgent):
                 for task in response.plan
             ]
         else:
-            self.next_state.current_epic["sub_epics"] = [
+            epic["sub_epics"] = [
                 {
                     "id": sub_epic_number,
                     "description": sub_epic.description,
@@ -274,10 +257,7 @@ class TechLead(RelevantFilesMixin, BaseAgent):
                 ]
                 convo.remove_last_x_messages(2)
 
-        await self.ui.send_epics_and_tasks(
-            self.next_state.current_epic["sub_epics"],
-            self.next_state.tasks,
-        )
+        await self.ui.send_epics_and_tasks(epic["sub_epics"], self.next_state.tasks)
 
         await self.ui.send_project_stage({"stage": ProjectStage.OPEN_PLAN})
         response = await self.ask_question(
@@ -289,11 +269,6 @@ class TechLead(RelevantFilesMixin, BaseAgent):
         )
 
         self.update_epics_and_tasks(response.text)
-
-        await self.ui.send_epics_and_tasks(
-            self.next_state.current_epic["sub_epics"],
-            self.next_state.tasks,
-        )
 
         await telemetry.trace_code_event(
             "development-plan",

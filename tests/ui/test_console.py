@@ -211,10 +211,7 @@ async def test_ask_question_buttons_only_verbose_shows_message(mock_PromptSessio
 
     assert prompt_async.await_count == 2
     captured = capsys.readouterr()
-    assert (
-        captured.out
-        == "Confirm?\n  [yes]: Yes\n  [no]: No\nPlease choose one of available options\n"
-    )
+    assert captured.out == "Confirm?\n  [yes]: Yes\n  [no]: No\nPlease choose one of available options\n"
 
 
 @pytest.mark.asyncio

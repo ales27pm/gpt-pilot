@@ -1,4 +1,5 @@
 import json
+import sys
 from argparse import ArgumentParser, ArgumentTypeError
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -155,7 +156,9 @@ def test_load_config_overridden(tmp_path):
     assert config.llm[LLMProvider.ANTHROPIC].api_key == "sk-test"
 
 
-def test_show_default_config(capsys):
+def test_show_default_config(capsys, monkeypatch):
+    monkeypatch.setitem(sys.modules, "asyncpg", MagicMock())
+    monkeypatch.setitem(sys.modules, "psycopg2", MagicMock())
     loader.config = Config()
     show_config()
     captured = capsys.readouterr()

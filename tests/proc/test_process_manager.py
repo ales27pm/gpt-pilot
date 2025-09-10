@@ -1,7 +1,7 @@
 import asyncio
+import sys
 from os import getenv, makedirs
 from os.path import join
-from sys import platform
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -9,21 +9,37 @@ from psutil import Process
 
 from core.proc.process_manager import LocalProcess, ProcessManager
 
+if sys.platform == "win32":
+    # Build command manually to avoid cmd.exe quoting issues that can cause the
+    # process to exit immediately before tests can inspect it. Python on Windows
+    # requires additional environment variables beyond PATH to start correctly.
+    SLEEP_CMD = f'"{sys.executable}" -c "import time; time.sleep(5)"'
+    ENV = {
+        "PATH": getenv("PATH"),
+        "SYSTEMROOT": getenv("SYSTEMROOT"),
+        "SYSTEMDRIVE": getenv("SYSTEMDRIVE"),
+    }
+else:
+    import shlex
+
+    SLEEP_CMD = " ".join(shlex.quote(arg) for arg in [sys.executable, "-c", "import time; time.sleep(5)"])
+    ENV = {"PATH": getenv("PATH")}
+
 
 @pytest.mark.asyncio
 async def test_local_process_start_terminate(tmp_path):
-    cmd = "timeout 5" if platform == "win32" else "sleep 5"
+    cmd = SLEEP_CMD
 
     lp = await LocalProcess.start(
         cmd,
         cwd=tmp_path,
-        env={"PATH": getenv("PATH")},
+        env=ENV,
         bg=False,
     )
 
     assert lp.cmd == cmd
     assert lp.cwd == tmp_path
-    assert lp.env == {"PATH": getenv("PATH")}
+    assert lp.env == ENV
     assert lp.stdout == ""
     assert lp.stderr == ""
 
@@ -37,12 +53,12 @@ async def test_local_process_start_terminate(tmp_path):
 
 @pytest.mark.asyncio
 async def test_local_process_wait(tmp_path):
-    cmd = "timeout 5" if platform == "win32" else "sleep 5"
+    cmd = SLEEP_CMD
 
     lp = await LocalProcess.start(
         cmd,
         cwd=tmp_path,
-        env={"PATH": getenv("PATH")},
+        env=ENV,
         bg=False,
     )
 
@@ -55,12 +71,12 @@ async def test_local_process_wait(tmp_path):
 
 @pytest.mark.asyncio
 async def test_local_process_wait_handles_unresponsive_process(tmp_path):
-    cmd = "timeout 5" if platform == "win32" else "sleep 5"
+    cmd = SLEEP_CMD
 
     lp = await LocalProcess.start(
         cmd,
         cwd=tmp_path,
-        env={"PATH": getenv("PATH")},
+        env=ENV,
         bg=False,
         kill_wait_timeout=0.1,
     )
@@ -72,13 +88,14 @@ async def test_local_process_wait_handles_unresponsive_process(tmp_path):
 
     lp._process.wait = AsyncMock(side_effect=never_exit)
 
-    with patch.object(LocalProcess, "terminate", AsyncMock()) as term:
+    with patch.object(LocalProcess, "terminate", AsyncMock(wraps=lp.terminate)) as term:
         ret = await lp.wait(0.1)
         assert ret == -1
         term.assert_awaited()
 
-    lp._process.kill()
-    await orig_wait()
+    # ensure underlying wait coroutine restored and awaited for cleanup
+    lp._process.wait = orig_wait
+    await lp._process.wait()
 
 
 @pytest.mark.asyncio
@@ -118,7 +135,7 @@ async def test_process_manager_run_command_capture_stderr(tmp_path):
 @pytest.mark.asyncio
 @patch("core.proc.process_manager.WATCHER_IDLE_INTERVAL", 0.1)
 async def test_process_manager_start_list_terminate(tmp_path):
-    cmd = "timeout 5" if platform == "win32" else "sleep 5"
+    cmd = SLEEP_CMD
     cwd = join("some", "sub", "directory")
     abs_cwd = join(tmp_path, cwd)
     makedirs(abs_cwd, exist_ok=True)

@@ -155,10 +155,12 @@ async def test_render_typer_cli(mock_get_config, testmanager):
     for f in ["main.py", "requirements.txt"]:
         assert f in files
 
+
 # ---------------------------------------------------------------------------
 # Additional tests appended by automation to expand coverage for template flows
 # Framework: pytest with unittest.mock (consistent with existing tests)
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.asyncio
 @patch("core.state.state_manager.get_config")

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 from enum import Enum
@@ -148,7 +150,9 @@ class IPCClientUI(UIBase):
         data = b""
         while True:
             try:
-                response = await self.reader.read(MESSAGE_SIZE_LIMIT)
+                response = await asyncio.wait_for(self.reader.read(MESSAGE_SIZE_LIMIT), timeout=1)
+            except asyncio.TimeoutError:
+                raise UIClosedError()
             except (
                 asyncio.exceptions.IncompleteReadError,
                 ConnectionResetError,

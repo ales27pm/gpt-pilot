@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from dataclasses import dataclass, field
 
 
@@ -13,7 +14,9 @@ class OllamaJob:
     model: str = field(compare=False, default="")
     cpu_threads: int = field(compare=False, default=1)
     gpu_mem_mb: int = field(compare=False, default=1)
+    sleep_ms: int = field(compare=False, default=0)
     _future: asyncio.Future[str] = field(init=False, repr=False, compare=False)
+    _done: asyncio.Event = field(init=False, repr=False, compare=False)
 
 
 class WeightedSemaphore:
@@ -61,17 +64,25 @@ class OllamaScheduler:
     async def submit(self, job: OllamaJob) -> str:
         """Submit a job and wait for its completion."""
 
-        if job.cpu_threads <= 0 or job.gpu_mem_mb <= 0:
-            raise ValueError("cpu_threads and gpu_mem_mb must be positive")
+        if job.cpu_threads < 0 or job.gpu_mem_mb < 0:
+            raise ValueError("cpu_threads and gpu_mem_mb must be non-negative")
+        if not isinstance(job.prompt, str) or not job.prompt:
+            raise ValueError("prompt must be a non-empty string")
         if job.cpu_threads > self.total_cpu_threads or job.gpu_mem_mb > self.total_gpu_mem:
             raise ValueError("Requested resources exceed scheduler limits")
 
         loop = asyncio.get_running_loop()
         job._future = loop.create_future()
+        job._done = asyncio.Event()
         await self._queue.put(job)
         # start worker to process queue
         asyncio.create_task(self._worker())
-        return await job._future
+        try:
+            return await job._future
+        except asyncio.CancelledError:
+            job._future.cancel()
+            await job._done.wait()
+            raise
 
     async def _worker(self) -> None:
         while not self._queue.empty():
@@ -84,17 +95,27 @@ class OllamaScheduler:
             finally:
                 self._cpu_sem.release()
 
+            if job._future.cancelled():
+                job._done.set()
+                continue
+
             # GPU phase
             await self._gpu_ws.acquire(job.gpu_mem_mb)
             self._gpu_active += 1
             self.max_gpu_concurrency = max(self.max_gpu_concurrency, self._gpu_active)
+            sleep_task = asyncio.create_task(asyncio.sleep(job.sleep_ms / 1000))
             try:
-                await asyncio.sleep(0)  # Simulate GPU inference
-                self.completed.append(job)
-                job._future.set_result(job.prompt)
+                await asyncio.wait({sleep_task, job._future}, return_when=asyncio.FIRST_COMPLETED)
+                if not job._future.cancelled():
+                    self.completed.append(job)
+                    job._future.set_result(job.prompt)
             finally:
+                sleep_task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await sleep_task
                 self._gpu_active -= 1
                 self._gpu_ws.release(job.gpu_mem_mb)
+                job._done.set()
 
 
 __all__ = ["OllamaJob", "OllamaScheduler", "WeightedSemaphore"]

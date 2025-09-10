@@ -42,41 +42,14 @@ async def test_scheduler_runs_gpu_jobs_concurrently():
     assert scheduler.cpu_free == scheduler.total_cpu_threads
     assert scheduler.gpu_mem_free == scheduler.total_gpu_mem
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     # Ensure jobs completed in non-decreasing priority order
     priorities = [job.priority for job in scheduler.completed]
     assert priorities == sorted(priorities)
 
+
 # Additional comprehensive tests for OllamaScheduler
 # Testing framework: pytest with pytest-asyncio style markers already used in this project.
 
-import time
 
 @pytest.mark.asyncio
 async def test_scheduler_respects_cpu_capacity_when_gpu_is_plenty():
@@ -99,6 +72,7 @@ async def test_scheduler_respects_cpu_capacity_when_gpu_is_plenty():
     assert scheduler.cpu_free == scheduler.total_cpu_threads
     assert scheduler.gpu_mem_free == scheduler.total_gpu_mem
 
+
 @pytest.mark.asyncio
 async def test_scheduler_rejects_job_exceeding_total_resources():
     scheduler = OllamaScheduler(total_cpu_threads=2, total_gpu_mem=1024)
@@ -115,6 +89,7 @@ async def test_scheduler_rejects_job_exceeding_total_resources():
     assert scheduler.cpu_free == scheduler.total_cpu_threads
     assert scheduler.gpu_mem_free == scheduler.total_gpu_mem
 
+
 @pytest.mark.asyncio
 async def test_scheduler_zero_resource_job_executes_and_cleans_up():
     # A job that nominally doesn't consume resources (if supported) should still run.
@@ -125,6 +100,7 @@ async def test_scheduler_zero_resource_job_executes_and_cleans_up():
     assert scheduler.cpu_free == scheduler.total_cpu_threads
     assert scheduler.gpu_mem_free == scheduler.total_gpu_mem
     assert scheduler.completed[-1] is zero_job
+
 
 @pytest.mark.asyncio
 async def test_scheduler_priority_ordering_with_contention():
@@ -149,11 +125,16 @@ async def test_scheduler_priority_ordering_with_contention():
     assert scheduler.cpu_free == scheduler.total_cpu_threads
     assert scheduler.gpu_mem_free == scheduler.total_gpu_mem
 
+
 @pytest.mark.asyncio
 async def test_scheduler_handles_cancellation_and_releases_resources():
     # Submit a job and cancel it; resources must be returned and job not counted as completed.
     scheduler = OllamaScheduler(total_cpu_threads=1, total_gpu_mem=1)
-    long_job = OllamaJob(priority=0, prompt="long", cpu_threads=1, gpu_mem_mb=1, sleep_ms=300) if hasattr(OllamaJob, "sleep_ms") else OllamaJob(priority=0, prompt="long", cpu_threads=1, gpu_mem_mb=1)
+    long_job = (
+        OllamaJob(priority=0, prompt="long", cpu_threads=1, gpu_mem_mb=1, sleep_ms=300)
+        if hasattr(OllamaJob, "sleep_ms")
+        else OllamaJob(priority=0, prompt="long", cpu_threads=1, gpu_mem_mb=1)
+    )
 
     # Fire off the task and cancel shortly after
     task = asyncio.create_task(scheduler.submit(long_job))
@@ -167,6 +148,7 @@ async def test_scheduler_handles_cancellation_and_releases_resources():
     assert scheduler.gpu_mem_free == scheduler.total_gpu_mem
     assert all(j is not long_job for j in scheduler.completed)
 
+
 @pytest.mark.asyncio
 async def test_scheduler_many_small_gpu_jobs_hit_gpu_concurrency():
     # Ensure GPU concurrency tracking reflects parallelism under sufficient CPU.
@@ -179,6 +161,7 @@ async def test_scheduler_many_small_gpu_jobs_hit_gpu_concurrency():
         assert scheduler.max_gpu_concurrency <= 8
     assert scheduler.cpu_free == scheduler.total_cpu_threads
     assert scheduler.gpu_mem_free == scheduler.total_gpu_mem
+
 
 @pytest.mark.asyncio
 async def test_scheduler_serializes_when_gpu_is_bottleneck():
@@ -196,6 +179,7 @@ async def test_scheduler_serializes_when_gpu_is_bottleneck():
         assert scheduler.max_gpu_concurrency == 1
     assert scheduler.cpu_free == scheduler.total_cpu_threads
     assert scheduler.gpu_mem_free == scheduler.total_gpu_mem
+
 
 @pytest.mark.asyncio
 async def test_scheduler_invalid_inputs_raise_meaningful_errors():
@@ -215,6 +199,7 @@ async def test_scheduler_invalid_inputs_raise_meaningful_errors():
     except TypeError:
         # Dataclass/type validation may throw on construction; that's acceptable.
         pass
+
 
 @pytest.mark.asyncio
 async def test_scheduler_completes_and_tracks_order_of_equal_priority():

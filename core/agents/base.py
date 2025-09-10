@@ -51,12 +51,24 @@ class BaseAgent:
     @property
     def current_state(self) -> ProjectState:
         """Current state of the project (read-only)."""
+        if hasattr(self, "_test_current_state"):
+            return self._test_current_state  # type: ignore[attr-defined]
         return self.state_manager.current_state
+
+    @current_state.setter
+    def current_state(self, value: ProjectState) -> None:  # pragma: no cover - setter used only in tests
+        self._test_current_state = value
 
     @property
     def next_state(self) -> ProjectState:
         """Next state of the project (write-only)."""
+        if hasattr(self, "_test_next_state"):
+            return self._test_next_state  # type: ignore[attr-defined]
         return self.state_manager.next_state
+
+    @next_state.setter
+    def next_state(self, value: ProjectState) -> None:  # pragma: no cover - setter used only in tests
+        self._test_next_state = value
 
     def prompt_context(self, **extra: Any) -> dict[str, Any]:
         """Return common context variables for prompt templates."""

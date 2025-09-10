@@ -17,7 +17,7 @@ from core.llm.parser import CodeBlockParser, EnumParser, JSONParser, MultiCodeBl
         ("```py\nsome code\n```", ["some code"]),
         ("```py\nsome ``` code\n```", ["some ``` code"]),
         (
-            "some text preamble\n" "```\nsome code\n```\n" "```py\nmore\ncode\n```\n" "some text conclusion",
+            "some text preamble\n```\nsome code\n```\n```py\nmore\ncode\n```\nsome text conclusion",
             ["some code", "more\ncode"],
         ),
     ],

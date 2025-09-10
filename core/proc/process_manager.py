@@ -121,8 +121,14 @@ class LocalProcess:
         # This is a recursive function that terminates the entire process tree
         # of the current process. It first terminates all child processes, then
         # terminates itself.
-        shell_process = psutil.Process(self._process.pid)
-        processes = shell_process.children(recursive=True)
+        try:
+            shell_process = psutil.Process(self._process.pid)
+        except psutil.NoSuchProcess:
+            return
+        try:
+            processes = shell_process.children(recursive=True)
+        except psutil.NoSuchProcess:
+            processes = []
         processes.append(shell_process)
         for proc in processes:
             try:

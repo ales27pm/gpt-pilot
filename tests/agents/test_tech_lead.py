@@ -1,11 +1,14 @@
 import json
+import re
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
 
-from core.agents.response import ResponseType
+from core.agents.response import AgentResponse, ResponseType
 from core.agents.tech_lead import DevelopmentPlan, Epic, TechLead
 from core.db.models import Complexity
+from core.db.models.project_state import TaskStatus
 from core.ui.base import UserInput
 
 
@@ -122,21 +125,6 @@ async def test_plan_epic(agentcontext):
     assert sm.current_state.tasks[0]["description"] == "Task 1"
     assert sm.current_state.tasks[1]["description"] == "Task 2"
 
-# ---------------------------------------------------------------------------
-# Additional tests generated to broaden coverage of TechLead behavior.
-# Testing library/framework: pytest + pytest-asyncio; mocks via unittest.mock.AsyncMock
-# Focus: Extend scenarios around initial epic creation, planning with user edits,
-# avoiding epic duplication, and template application fallbacks.
-# ---------------------------------------------------------------------------
-
-import json
-from unittest.mock import AsyncMock
-import pytest
-from core.agents.response import ResponseType
-from core.agents.tech_lead import DevelopmentPlan, Epic, TechLead
-from core.db.models import Complexity
-from core.ui.base import UserInput
-
 
 @pytest.mark.asyncio
 async def test_create_initial_epic_when_no_existing_epics(agentcontext):
@@ -180,9 +168,7 @@ async def test_plan_epic_accepts_user_modified_tasks(agentcontext):
 
     tl = TechLead(sm, ui)
     tl.get_llm = mock_get_llm(
-        return_value=DevelopmentPlan(
-            plan=[Epic(description="Task 1"), Epic(description="Task 2")]
-        )
+        return_value=DevelopmentPlan(plan=[Epic(description="Task 1"), Epic(description="Task 2")])
     )
 
     # Ensure UI methods are async and track invocations
@@ -198,9 +184,7 @@ async def test_plan_epic_accepts_user_modified_tasks(agentcontext):
             ],
         }
     ]
-    ui.ask_question.return_value = UserInput(
-        button="done_editing", text=json.dumps(edited)
-    )
+    ui.ask_question.return_value = UserInput(button="done_editing", text=json.dumps(edited))
 
     response = await tl.run()
     assert response.type == ResponseType.DONE
@@ -242,15 +226,11 @@ async def test_plan_epic_does_not_duplicate_initial_project_epic(agentcontext):
     await sm.commit()
 
     tl = TechLead(sm, ui)
-    tl.get_llm = mock_get_llm(
-        return_value=DevelopmentPlan(plan=[Epic(description="Task X")])
-    )
+    tl.get_llm = mock_get_llm(return_value=DevelopmentPlan(plan=[Epic(description="Task X")]))
     ui.send_epics_and_tasks = AsyncMock()
     ui.ask_question.return_value = UserInput(
         button="done_editing",
-        text=json.dumps(
-            [{"description": "Initial Project", "tasks": [{"description": "Task X"}]}]
-        ),
+        text=json.dumps([{"description": "Initial Project", "tasks": [{"description": "Task X"}]}]),
     )
 
     _ = await tl.run()
@@ -273,24 +253,11 @@ async def test_apply_project_template_with_unknown_template_no_files(agentcontex
 
     tl = TechLead(sm, ui)
     response = await tl.run()
-    assert response.type == ResponseType.DDONE if hasattr(ResponseType, "DDONE") else ResponseType.DONE
+    assert response.type == ResponseType.DONE
 
     await sm.commit()
     # Unknown template should not create files
     assert sm.current_state.files == []
-# Test framework: pytest with pytest-asyncio for async coroutine tests.
-# These tests focus on pure/data-manipulating logic and top-level branch behavior
-# of TechLead without exercising external systems (LLMs, UI, telemetry).
-import json
-import re
-from types import SimpleNamespace
-
-import pytest
-
-from core.agents.tech_lead import TechLead
-from core.db.models.project_state import TaskStatus
-from core.db.models import Complexity
-from core.agents.response import AgentResponse
 
 
 def _make_tl(
