@@ -15,6 +15,7 @@ from core.ui.base import JSONDict, JSONList, UIBase, UIClosedError, UISource, Us
 VSCODE_EXTENSION_HOST = "localhost"
 VSCODE_EXTENSION_PORT = 8125
 MESSAGE_SIZE_LIMIT = 512 * 1024
+DEBUG_LOGS_MAX_ATTEMPTS = 5
 
 log = get_logger(__name__)
 
@@ -118,6 +119,7 @@ class IPCClientUI(UIBase):
         self.config = config
         self.reader = None
         self.writer = None
+        self._pending_messages: list[Message] = []
 
     async def start(self):
         log.debug(f"Connecting to IPC server at {self.config.host}:{self.config.port}")
@@ -147,6 +149,9 @@ class IPCClientUI(UIBase):
             raise UIClosedError()
 
     async def _receive(self) -> Message:
+        if self._pending_messages:
+            return self._pending_messages.pop(0)
+
         data = b""
         while True:
             try:
@@ -437,6 +442,27 @@ class IPCClientUI(UIBase):
             MessageType.DEBUGGING_LOGS,
             content=data_about_logs,
         )
+
+    async def get_debugging_logs(self) -> tuple[str, str]:
+        attempts = 0
+        while attempts < DEBUG_LOGS_MAX_ATTEMPTS:
+            try:
+                response = await self._receive()
+            except UIClosedError:
+                return "", ""
+            if response.type == MessageType.DEBUGGING_LOGS:
+                content = response.content if isinstance(response.content, dict) else {}
+                backend = content.get("backend") or ""
+                frontend = content.get("frontend") or ""
+                return backend, frontend
+            log.warning(
+                "Unexpected message type %s while awaiting debugging logs",
+                response.type,
+            )
+            self._pending_messages.append(response)
+            attempts += 1
+            await asyncio.sleep(0.1)
+        return "", ""
 
     async def send_run_command(self, run_command: str):
         await self._send(

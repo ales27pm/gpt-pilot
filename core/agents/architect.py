@@ -72,11 +72,11 @@ class Architecture(BaseModel):
         description="Type of the app to build.",
     )
     system_dependencies: list[SystemDependency] = Field(
-        None,
+        default_factory=list,
         description="List of system dependencies required to build and run the app.",
     )
     package_dependencies: list[PackageDependency] = Field(
-        None,
+        default_factory=list,
         description="List of framework/language-specific packages used by the app.",
     )
 
@@ -102,7 +102,9 @@ class Architect(BaseAgent):
         if spec.example_project:
             self.prepare_example_project(spec)
         else:
-            await self.plan_architecture(spec)
+            response = await self.plan_architecture(spec)
+            if isinstance(response, AgentResponse):
+                return response
 
         await self.check_system_dependencies(spec)
 
@@ -160,7 +162,7 @@ class Architect(BaseAgent):
 
         return tpl.architecture, templates
 
-    async def plan_architecture(self, spec: Specification):
+    async def plan_architecture(self, spec: Specification) -> Optional[AgentResponse]:
         await self.send_message("Planning project architecture ...")
         architecture_description, templates = await self.select_templates(spec)
 
@@ -178,41 +180,59 @@ class Architect(BaseAgent):
         )
         arch: Architecture = await llm(convo, parser=JSONParser(Architecture))
 
-        await self.check_compatibility(arch)
+        response = await self.check_compatibility(arch)
+        if isinstance(response, AgentResponse):
+            return response
 
         spec.architecture = architecture_description
-        spec.templates = {t.name: t.options_dict for t in templates.values()}
-        spec.system_dependencies = [d.model_dump() for d in arch.system_dependencies]
-        spec.package_dependencies = [d.model_dump() for d in arch.package_dependencies]
+        spec.templates = {t.name: t.options_dict() for t in templates.values()}
+        spec.system_dependencies = [d.model_dump() for d in arch.system_dependencies or [] if d]
+        spec.package_dependencies = [d.model_dump() for d in arch.package_dependencies or [] if d]
         telemetry.set("architecture", json.loads(arch.model_dump_json()))
 
-    async def check_compatibility(self, arch: Architecture) -> bool:
-        warn_system_deps = [dep.name for dep in arch.system_dependencies if dep.name.lower() in WARN_SYSTEM_DEPS]
-        warn_package_deps = [dep.name for dep in arch.package_dependencies if dep.name.lower() in WARN_FRAMEWORKS]
+        return None
+
+    async def check_compatibility(self, arch: Architecture) -> Optional[AgentResponse]:
+        warn_system_deps = [
+            dep.name
+            for dep in arch.system_dependencies or []
+            if getattr(dep, "name", None) and dep.name.lower() in WARN_SYSTEM_DEPS
+        ]
+        warn_package_deps = [
+            dep.name
+            for dep in arch.package_dependencies or []
+            if getattr(dep, "name", None) and dep.name.lower() in WARN_FRAMEWORKS
+        ]
 
         if warn_system_deps:
-            await self.ask_question(
+            response = await self._confirm_continue(
                 f"Warning: Pythagora doesn't officially support {', '.join(warn_system_deps)}. "
-                f"You can try to use {'it' if len(warn_system_deps) == 1 else 'them'}, but you may run into problems.",
-                buttons={"continue": "Continue"},
-                buttons_only=True,
-                default="continue",
+                f"You can try to use {'it' if len(warn_system_deps) == 1 else 'them'}, but you may run into problems."
             )
+            if response:
+                return response
 
         if warn_package_deps:
-            await self.ask_question(
+            response = await self._confirm_continue(
                 f"Warning: Pythagora works best with vanilla JavaScript. "
                 f"You can try try to use {', '.join(warn_package_deps)}, but you may run into problems. "
-                f"Visit {WARN_FRAMEWORKS_URL} for more information.",
-                buttons={"continue": "Continue"},
-                buttons_only=True,
-                default="continue",
+                f"Visit {WARN_FRAMEWORKS_URL} for more information."
             )
+            if response:
+                return response
 
-        # TODO: add "cancel" option to the above buttons; if pressed, Architect should
-        # return AgentResponse.revise_spec()
-        # that SpecWriter should catch and allow the user to reword the initial spec.
-        return True
+        return None
+
+    async def _confirm_continue(self, message: str) -> Optional[AgentResponse]:
+        answer = await self.ask_question(
+            message,
+            buttons={"continue": "Continue", "cancel": "Cancel"},
+            buttons_only=True,
+            default="continue",
+        )
+        if answer.button == "cancel":
+            return AgentResponse.update_specification(self, description="User cancelled; please reword specification.")
+        return None
 
     def prepare_example_project(self, spec: Specification):
         log.debug(f"Setting architecture for example project: {spec.example_project}")

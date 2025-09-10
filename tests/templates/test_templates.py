@@ -20,7 +20,7 @@ async def test_render_react_express_sql(mock_get_config, testmanager):
     options = TemplateClass.options_class(db_type="sql", auth=True)
     template = TemplateClass(options, sm, pm)
 
-    assert template.options_dict == {"db_type": "sql", "auth": True}
+    assert template.options_dict() == {"db_type": "sql", "auth": True}
 
     await template.apply()
 
@@ -44,7 +44,7 @@ async def test_render_react_express_nosql(mock_get_config, testmanager):
     options = TemplateClass.options_class(db_type="nosql", auth=True)
     template = TemplateClass(options, sm, pm)
 
-    assert template.options_dict == {"db_type": "nosql", "auth": True}
+    assert template.options_dict() == {"db_type": "nosql", "auth": True}
 
     await template.apply()
 
@@ -67,7 +67,7 @@ async def test_render_node_express_mongoose(mock_get_config, testmanager):
     TemplateClass = PROJECT_TEMPLATES["node_express_mongoose"]
     template = TemplateClass(TemplateClass.options_class(), sm, pm)
 
-    assert template.options_dict == {}
+    assert template.options_dict() == {}
 
     await template.apply()
 
@@ -176,7 +176,7 @@ async def test_render_react_express_sql_no_auth(mock_get_config, testmanager):
     options = TemplateClass.options_class(db_type="sql", auth=False)
     template = TemplateClass(options, sm, pm)
 
-    assert template.options_dict == {"db_type": "sql", "auth": False}
+    assert template.options_dict() == {"db_type": "sql", "auth": False}
 
     await template.apply()
 
@@ -211,7 +211,7 @@ async def test_render_react_express_nosql_no_auth(mock_get_config, testmanager):
     options = TemplateClass.options_class(db_type="nosql", auth=False)
     template = TemplateClass(options, sm, pm)
 
-    assert template.options_dict == {"db_type": "nosql", "auth": False}
+    assert template.options_dict() == {"db_type": "nosql", "auth": False}
 
     await template.apply()
 

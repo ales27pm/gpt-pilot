@@ -12,6 +12,17 @@ JSONList = list[JSONDict]
 """List of :class:`JSONDict` items, such as modified file descriptors."""
 
 
+DEBUG_LOG_MARK = "PYTHAGORA_DEBUGGING_LOG"
+"""Marker used to identify log lines captured for debugging."""
+
+
+def extract_debugging_logs(logs: Optional[str]) -> str:
+    """Return only lines marked with :data:`DEBUG_LOG_MARK` from ``logs``."""
+    if not logs:
+        return ""
+    return "\n".join(line for line in logs.splitlines() if DEBUG_LOG_MARK in line)
+
+
 class ProjectStage(str, Enum):
     PROJECT_NAME = "project_name"
     PROJECT_DESCRIPTION = "project_description"
@@ -276,6 +287,10 @@ class UIBase:
         """
         raise NotImplementedError()
 
+    async def get_debugging_logs(self) -> tuple[str, str]:
+        """Retrieve backend and frontend logs captured during testing."""
+        return "", ""
+
     async def send_run_command(self, run_command: str):
         """
         Send a run command to the UI.
@@ -451,4 +466,6 @@ __all__ = [
     "UIBase",
     "pythagora_source",
     "success_source",
+    "DEBUG_LOG_MARK",
+    "extract_debugging_logs",
 ]

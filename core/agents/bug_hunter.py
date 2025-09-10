@@ -13,7 +13,7 @@ from core.db.models.project_state import IterationStatus
 from core.llm.parser import JSONParser
 from core.log import get_logger
 from core.telemetry import telemetry
-from core.ui.base import ProjectStage, pythagora_source
+from core.ui.base import ProjectStage, extract_debugging_logs, pythagora_source
 
 log = get_logger(__name__)
 
@@ -209,9 +209,13 @@ class BugHunter(ChatWithBreakdownMixin, BaseAgent):
                 self.next_state.flag_iterations_as_modified()
                 return AgentResponse.done(self)
 
-            # TODO select only the logs that are new (with PYTHAGORA_DEBUGGING_LOG)
-            self.next_state.current_iteration["bug_hunting_cycles"][-1]["backend_logs"] = None
-            self.next_state.current_iteration["bug_hunting_cycles"][-1]["frontend_logs"] = None
+            backend_logs, frontend_logs = await self.ui.get_debugging_logs()
+            self.next_state.current_iteration["bug_hunting_cycles"][-1]["backend_logs"] = extract_debugging_logs(
+                backend_logs
+            )
+            self.next_state.current_iteration["bug_hunting_cycles"][-1]["frontend_logs"] = extract_debugging_logs(
+                frontend_logs
+            )
             self.next_state.current_iteration["bug_hunting_cycles"][-1]["user_feedback"] = user_feedback.text
             self.next_state.current_iteration["status"] = IterationStatus.HUNTING_FOR_BUG
 
