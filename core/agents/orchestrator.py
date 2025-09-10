@@ -101,20 +101,28 @@ class Orchestrator(BaseAgent, GitMixin):
                 should_update_knowledge_base = any(
                     "src/pages/" in single_agent.step.get("save_file", {}).get("path", "")
                     or "src/api/" in single_agent.step.get("save_file", {}).get("path", "")
-                    or len(single_agent.step.get("related_api_endpoints")) > 0
+                    or len(single_agent.step.get("related_api_endpoints", [])) > 0
                     for single_agent in agent
                 )
 
                 if should_update_knowledge_base:
-                    files_with_implemented_apis = [
-                        {
-                            "path": single_agent.step.get("save_file", {}).get("path", None),
-                            "related_api_endpoints": single_agent.step.get("related_api_endpoints"),
-                            "line": 0,  # TODO implement getting the line number here
-                        }
-                        for single_agent in agent
-                        if len(single_agent.step.get("related_api_endpoints")) > 0
-                    ]
+                    files_with_implemented_apis = []
+                    for single_agent in agent:
+                        endpoints = single_agent.step.get("related_api_endpoints")
+                        path = single_agent.step.get("save_file", {}).get("path", None)
+                        if not endpoints or not path:
+                            continue
+                        file_obj = await self.state_manager.get_file_by_path(path)
+                        content = file_obj.content.content if file_obj else ""
+                        endpoint_infos = []
+                        for endpoint in endpoints:
+                            line_num = 0
+                            for i, line in enumerate(content.splitlines(), start=1):
+                                if endpoint in line:
+                                    line_num = i
+                                    break
+                            endpoint_infos.append({"endpoint": endpoint, "line": line_num})
+                        files_with_implemented_apis.append({"path": path, "endpoints": endpoint_infos})
                     await self.state_manager.update_apis(files_with_implemented_apis)
                     await self.state_manager.update_implemented_pages_and_apis()
 

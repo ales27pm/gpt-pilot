@@ -66,7 +66,10 @@ class Executor(BaseAgent):
         await self.ui.send_stream_chunk(err, source=self.cmd_ui_source)
 
     async def exit_handler(self, process):
-        pass
+        """Handle process exit events by reporting the return code."""
+        returncode = process._process.returncode
+        msg = f"\nCommand `{process.cmd}` exited with code {returncode}\n"
+        await self.ui.send_stream_chunk(msg, source=self.cmd_ui_source)
 
     async def run(self) -> AgentResponse:
         if not self.step:
@@ -128,7 +131,7 @@ class Executor(BaseAgent):
         await self.state_manager.log_command_run(exec_log)
 
         # FIXME: ErrorHandler isn't debugged with BugHunter - we should move all commands to run before testing and debug them with BugHunter
-        if True or llm_response.success:
+        if llm_response.success:
             return AgentResponse.done(self)
 
         return AgentResponse.error(

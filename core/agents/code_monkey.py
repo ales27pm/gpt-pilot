@@ -27,6 +27,7 @@ MAX_REVIEW_RETRIES = 2
 
 # Maximum number of code implementation attempts after which we accept the changes unconditionaly
 MAX_CODING_ATTEMPTS = 3
+MAX_GENERATION_ATTEMPTS = 3
 
 
 class Decision(str, Enum):
@@ -125,8 +126,14 @@ class CodeMonkey(FileDiffMixin, BaseAgent):
                 rework_feedback=feedback,
             )
 
-        response: str = await llm(convo, temperature=0, parser=OptionalCodeBlockParser())
-        # FIXME: provide a counter here so that we don't have an endless loop here
+        response = ""
+        for _ in range(MAX_GENERATION_ATTEMPTS):
+            response = await llm(convo, temperature=0, parser=OptionalCodeBlockParser())
+            if response.strip():
+                break
+        if not response.strip():
+            raise ValueError("Failed to generate code changes")
+
         return {
             "path": file_name,
             "instructions": task["instructions"],
