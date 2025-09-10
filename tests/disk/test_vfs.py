@@ -104,3 +104,33 @@ def test_local_disk_vfs_remove_missing_logs_warning(tmp_path, caplog):
     with caplog.at_level("WARNING", logger="core.disk.vfs"):
         vfs.remove(missing)
     assert f"Attempted to remove non-existent file: {full_path}" in caplog.text
+
+
+def test_memory_vfs_logs_full_path(caplog):
+    vfs = MemoryVFS()
+    path = "test.txt"
+    full_path = vfs.get_full_path(path)
+
+    with caplog.at_level("DEBUG", logger="core.disk.vfs"):
+        vfs.save(path, "hello")
+    assert f"Saved file {path} to {full_path}" in caplog.text
+
+    caplog.clear()
+    with caplog.at_level("DEBUG", logger="core.disk.vfs"):
+        vfs.remove(path)
+    assert f"Removed file {path} from {full_path}" in caplog.text
+
+
+def test_local_disk_vfs_logs_full_path(tmp_path, caplog):
+    vfs = LocalDiskVFS(tmp_path)
+    path = "test.txt"
+    full_path = vfs.get_full_path(path)
+
+    with caplog.at_level("DEBUG", logger="core.disk.vfs"):
+        vfs.save(path, "hello")
+    assert f"Saved file {path} to {full_path}" in caplog.text
+
+    caplog.clear()
+    with caplog.at_level("DEBUG", logger="core.disk.vfs"):
+        vfs.remove(path)
+    assert f"Removed file {path} from {full_path}" in caplog.text

@@ -94,7 +94,7 @@ class MemoryVFS(VirtualFileSystem):
     def save(self, path: str, content: str):
         self.files[path] = content
         full_path = self.get_full_path(path)
-        log.debug(f"Saved file {path} ({len(content)} bytes) to {full_path}")
+        log.debug(f"Saved file {path} to {full_path}")
 
     def read(self, path: str) -> str:
         try:
@@ -149,7 +149,7 @@ class LocalDiskVFS(VirtualFileSystem):
         os.makedirs(os.path.dirname(full_path), exist_ok=True)
         with open(full_path, "w", encoding="utf-8") as f:
             f.write(content)
-        log.debug(f"Saved file {path} ({len(content)} bytes) to {full_path}")
+        log.debug(f"Saved file {path} to {full_path}")
 
     def read(self, path: str) -> str:
         full_path = self.get_full_path(path)
@@ -161,10 +161,10 @@ class LocalDiskVFS(VirtualFileSystem):
             return f.read()
 
     def remove(self, path: str):
-        full_path = self.get_full_path(path)
-        if os.path.exists(full_path) and self.ignore_matcher.ignore(path):
+        if self.ignore_matcher._is_in_ignore_list(path):  # pragma: no cover - private method
             return
 
+        full_path = self.get_full_path(path)
         try:
             os.remove(full_path)
             log.debug(f"Removed file {path} from {full_path}")
