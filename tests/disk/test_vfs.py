@@ -1,5 +1,7 @@
 from os.path import exists, join
 
+import pytest
+
 from core.disk.ignore import IgnoreMatcher
 from core.disk.vfs import LocalDiskVFS, MemoryVFS
 
@@ -8,6 +10,8 @@ def test_memory_vfs():
     vfs = MemoryVFS()
 
     assert vfs.list() == []
+    with pytest.raises(FileNotFoundError):
+        vfs.read("missing.txt")
 
     vfs.save("test.txt", "hello world")
     assert vfs.read("test.txt") == "hello world"
@@ -24,14 +28,14 @@ def test_memory_vfs():
 
     vfs.remove("test.txt")
     assert vfs.list() == ["subdir/another.txt"]
-
-    vfs.remove("nonexistent.txt")
 
 
 def test_local_disk_vfs(tmp_path):
     vfs = LocalDiskVFS(tmp_path)
 
     assert vfs.list() == []
+    with pytest.raises(FileNotFoundError):
+        vfs.read("missing.txt")
 
     vfs.save("test.txt", "hello world")
     assert vfs.read("test.txt") == "hello world"
@@ -48,8 +52,6 @@ def test_local_disk_vfs(tmp_path):
 
     vfs.remove("test.txt")
     assert vfs.list() == ["subdir/another.txt"]
-
-    vfs.remove("nonexistent.txt")
 
 
 def test_local_disk_vfs_with_matcher(tmp_path):
@@ -82,7 +84,53 @@ def test_local_disk_vfs_with_matcher(tmp_path):
     assert vfs.list() == ["subdir/another.txt"]
     assert not exists(join(tmp_path, "test.txt"))
 
-    vfs.remove("nonexistent.txt")
-
     vfs.remove("test.log")
     assert exists(join(tmp_path, "test.log"))
+
+
+def test_memory_vfs_remove_missing_logs_warning(caplog):
+    vfs = MemoryVFS()
+    missing = "ghost.txt"
+    full_path = vfs.get_full_path(missing)
+    with caplog.at_level("WARNING", logger="core.disk.vfs"):
+        vfs.remove(missing)
+    assert f"Attempted to remove non-existent file: {full_path}" in caplog.text
+
+
+def test_local_disk_vfs_remove_missing_logs_warning(tmp_path, caplog):
+    vfs = LocalDiskVFS(tmp_path)
+    missing = "ghost.txt"
+    full_path = vfs.get_full_path(missing)
+    with caplog.at_level("WARNING", logger="core.disk.vfs"):
+        vfs.remove(missing)
+    assert f"Attempted to remove non-existent file: {full_path}" in caplog.text
+
+
+def test_memory_vfs_logs_full_path(caplog):
+    vfs = MemoryVFS()
+    path = "test.txt"
+    full_path = vfs.get_full_path(path)
+
+    with caplog.at_level("DEBUG", logger="core.disk.vfs"):
+        vfs.save(path, "hello")
+    assert f"Saved file {path} to {full_path}" in caplog.text
+
+    caplog.clear()
+    with caplog.at_level("DEBUG", logger="core.disk.vfs"):
+        vfs.remove(path)
+    assert f"Removed file {path} from {full_path}" in caplog.text
+
+
+def test_local_disk_vfs_logs_full_path(tmp_path, caplog):
+    vfs = LocalDiskVFS(tmp_path)
+    path = "test.txt"
+    full_path = vfs.get_full_path(path)
+
+    with caplog.at_level("DEBUG", logger="core.disk.vfs"):
+        vfs.save(path, "hello")
+    assert f"Saved file {path} to {full_path}" in caplog.text
+
+    caplog.clear()
+    with caplog.at_level("DEBUG", logger="core.disk.vfs"):
+        vfs.remove(path)
+    assert f"Removed file {path} from {full_path}" in caplog.text
