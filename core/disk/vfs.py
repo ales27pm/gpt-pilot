@@ -93,16 +93,20 @@ class MemoryVFS(VirtualFileSystem):
 
     def save(self, path: str, content: str):
         self.files[path] = content
+        log.debug(f"Saved file {path} ({len(content)} bytes) to memory")
 
     def read(self, path: str) -> str:
         try:
             return self.files[path]
-        except KeyError:
-            raise ValueError(f"File not found: {path}")
+        except KeyError as err:
+            raise FileNotFoundError(f"File not found: {path}") from err
 
     def remove(self, path: str):
-        if path in self.files:
+        try:
             del self.files[path]
+            log.debug(f"Removed file {path} from memory")
+        except KeyError:
+            log.warning(f"Attempted to remove non-existent file: {path}")
 
     def get_full_path(self, path: str) -> str:
         # We use "/" internally on all platforms, including win32
@@ -143,14 +147,13 @@ class LocalDiskVFS(VirtualFileSystem):
         os.makedirs(os.path.dirname(full_path), exist_ok=True)
         with open(full_path, "w", encoding="utf-8") as f:
             f.write(content)
-        log.debug(f"Saved file {path} ({len(content)} bytes) to {full_path}")
+        log.debug(f"Saved {path} ({len(content)} bytes)")
 
     def read(self, path: str) -> str:
         full_path = self.get_full_path(path)
         if not os.path.isfile(full_path):
-            raise ValueError(f"File not found: {path}")
+            raise FileNotFoundError(f"File not found: {path}")
 
-        # TODO: do we want error handling here?
         with open(full_path, "r", encoding="utf-8") as f:
             return f.read()
 
@@ -159,12 +162,13 @@ class LocalDiskVFS(VirtualFileSystem):
             return
 
         full_path = self.get_full_path(path)
-        if os.path.isfile(full_path):
-            try:
-                os.remove(full_path)
-                log.debug(f"Removed file {path} from {full_path}")
-            except Exception as err:  # noqa
-                log.error(f"Failed to remove file {path}: {err}", exc_info=True)
+        try:
+            os.remove(full_path)
+            log.debug(f"Removed file {path} from {full_path}")
+        except FileNotFoundError:
+            log.warning(f"Attempted to remove non-existent file: {full_path}")
+        except Exception as err:  # noqa
+            log.error(f"Failed to remove file {path}: {err}", exc_info=True)
 
     def _get_file_list(self) -> list[str]:
         files = []
