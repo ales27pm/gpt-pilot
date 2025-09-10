@@ -278,3 +278,263 @@ async def test_apply_project_template_with_unknown_template_no_files(agentcontex
     await sm.commit()
     # Unknown template should not create files
     assert sm.current_state.files == []
+# Test framework: pytest with pytest-asyncio for async coroutine tests.
+# These tests focus on pure/data-manipulating logic and top-level branch behavior
+# of TechLead without exercising external systems (LLMs, UI, telemetry).
+import json
+import re
+from types import SimpleNamespace
+
+import pytest
+
+from core.agents.tech_lead import TechLead
+from core.db.models.project_state import TaskStatus
+from core.db.models import Complexity
+from core.agents.response import AgentResponse
+
+
+def _make_tl(
+    *,
+    epics=None,
+    spec_description="Spec description",
+    complexity=Complexity.SIMPLE,
+    templates=None,
+    files=None,
+):
+    """
+    Create a minimally-initialized TechLead instance suitable for unit testing.
+    We bypass __init__ and set the few attributes accessed by tested methods.
+    """
+    tl = TechLead.__new__(TechLead)
+
+    spec = SimpleNamespace(
+        description=spec_description,
+        complexity=complexity,
+        templates=templates,
+        template_summary=None,
+        # allow clone() fallback in code paths that might access it
+        clone=lambda: SimpleNamespace(
+            description=spec_description,
+            complexity=complexity,
+            templates=templates,
+            template_summary=None,
+        ),
+    )
+
+    tl.current_state = SimpleNamespace(
+        epics=list(epics or []),
+        specification=spec,
+        files=list(files or []),
+        tasks=[],
+        current_epic=None,
+        run_command=None,
+    )
+
+    tl.next_state = SimpleNamespace(
+        epics=list(epics or []),
+        relevant_files=None,
+        modified_files={},
+        tasks=[],
+        current_epic={"sub_epics": []},
+        action=None,
+        specification=None,
+    )
+
+    # Provide minimal stubs for attributes that could be touched in branches
+    tl.ui = SimpleNamespace(
+        send_message=lambda *a, **k: None,
+        send_run_command=lambda *a, **k: None,
+        send_epics_and_tasks=lambda *a, **k: None,
+        send_project_stage=lambda *a, **k: None,
+    )
+    tl.send_message = lambda *a, **k: None
+    tl.ask_question = lambda *a, **k: SimpleNamespace(button="continue", cancelled=False, text="")
+    tl.get_llm = lambda *a, **k: None  # not used in these unit tests
+
+    return tl
+
+
+# ------------------------------
+# create_initial_project_epic()
+# ------------------------------
+def test_create_initial_project_epic_sets_expected_fields_and_resets_file_state():
+    tl = _make_tl(epics=[])
+    # Pre-set values to verify they get reset
+    tl.next_state.relevant_files = "SHOULD_BE_RESET"
+    tl.next_state.modified_files = {"dirty": True}
+
+    tl.create_initial_project_epic()
+
+    assert isinstance(tl.next_state.epics, list)
+    assert len(tl.next_state.epics) == 1
+    epic = tl.next_state.epics[0]
+
+    assert epic["name"] == "Initial Project"
+    assert epic["source"] == "app"
+    assert epic["description"] == tl.current_state.specification.description
+    assert epic["completed"] is False
+    assert epic["summary"] is None
+    assert epic["test_instructions"] is None
+    assert epic["complexity"] == tl.current_state.specification.complexity
+    assert epic["sub_epics"] == []
+    assert re.fullmatch(r"[0-9a-f]{32}", epic["id"]), "id should be a 32-char hex string"
+
+    assert tl.next_state.relevant_files is None
+    assert tl.next_state.modified_files == {}
+
+
+# ------------------------------
+# update_epics_and_tasks()
+# ------------------------------
+def test_update_epics_and_tasks_preserves_unchanged_task_and_adds_new():
+    tl = _make_tl()
+    original_task = {
+        "id": "deadbeefdeadbeefdeadbeefdeadbeef",
+        "description": "Task unchanged",
+        "instructions": None,
+        "pre_breakdown_testing_instructions": None,
+        # Intentionally use a plain string so equality with JSON-loaded dict can succeed
+        "status": "TODO",
+        "sub_epic_id": 42,
+    }
+    tl.next_state.tasks = [original_task.copy()]
+
+    edited_plan = [
+        {
+            "description": "Sub Epic 1",
+            "tasks": [
+                original_task.copy(),  # exact match should be preserved and only sub_epic_id reassigned
+                {"description": "Task new"},  # no match -> new task with fresh id and TODO status
+            ],
+        }
+    ]
+    tl.update_epics_and_tasks(json.dumps(edited_plan))
+
+    # Sub-epics updated
+    assert tl.next_state.current_epic["sub_epics"] == [{"id": 1, "description": "Sub Epic 1"}]
+
+    tasks = tl.next_state.tasks
+    assert len(tasks) == 2
+
+    # First task preserved: same id, fields retained, sub_epic_id reassigned to 1
+    preserved = tasks[0]
+    assert preserved["id"] == original_task["id"]
+    assert preserved["description"] == "Task unchanged"
+    assert preserved["sub_epic_id"] == 1
+
+    # Second task added: fresh id (uuid4 hex), TODO enum status, Nones for instructions
+    added = tasks[1]
+    assert added["description"] == "Task new"
+    assert re.fullmatch(r"[0-9a-f]{32}", added["id"])
+    assert added["status"] == TaskStatus.TODO
+    assert added["instructions"] is None
+    assert added["pre_breakdown_testing_instructions"] is None
+    assert added["sub_epic_id"] == 1
+
+
+def test_update_epics_and_tasks_multiple_sub_epics_assigns_correct_sub_epic_ids():
+    tl = _make_tl()
+    # No exact matches on purpose -> both become new tasks in different sub-epics
+    edited_plan = [
+        {"description": "Sub 1", "tasks": [{"description": "A1"}]},
+        {"description": "Sub 2", "tasks": [{"description": "B1"}, {"description": "B2"}]},
+    ]
+    tl.update_epics_and_tasks(json.dumps(edited_plan))
+
+    assert tl.next_state.current_epic["sub_epics"] == [
+        {"id": 1, "description": "Sub 1"},
+        {"id": 2, "description": "Sub 2"},
+    ]
+    tasks = tl.next_state.tasks
+    assert [t["sub_epic_id"] for t in tasks] == [1, 2, 2]
+    assert all(re.fullmatch(r"[0-9a-f]{32}", t["id"]) for t in tasks)
+    assert all(t["status"] == TaskStatus.TODO for t in tasks)
+
+
+def test_update_epics_and_tasks_empty_plan_clears_sub_epics_and_tasks():
+    tl = _make_tl()
+    tl.next_state.current_epic["sub_epics"] = [{"id": 99, "description": "Old"}]
+    tl.next_state.tasks = [{"id": "x", "description": "Old task", "sub_epic_id": 99}]
+
+    tl.update_epics_and_tasks("[]")
+
+    assert tl.next_state.current_epic["sub_epics"] == []
+    assert tl.next_state.tasks == []
+
+
+def test_update_epics_and_tasks_invalid_json_raises():
+    tl = _make_tl()
+    with pytest.raises(json.JSONDecodeError):
+        tl.update_epics_and_tasks("{not: json}")
+
+
+# ------------------------------
+# run() branch behavior (async)
+# ------------------------------
+@pytest.mark.asyncio
+async def test_run_no_epics_calls_create_and_returns_done(monkeypatch):
+    tl = _make_tl(epics=[])
+    called = {"create": False}
+
+    def _create():
+        called["create"] = True
+
+    monkeypatch.setattr(tl, "create_initial_project_epic", _create)
+    monkeypatch.setattr(AgentResponse, "done", lambda _self: "DONE")
+
+    result = await tl.run()
+
+    assert called["create"] is True
+    assert result == "DONE"
+
+
+@pytest.mark.asyncio
+async def test_run_single_completed_epic_triggers_new_initial_epic(monkeypatch):
+    tl = _make_tl(epics=[{"completed": True}])
+    called = {"create": False}
+    monkeypatch.setattr(tl, "create_initial_project_epic", lambda: called.update(create=True))
+    monkeypatch.setattr(AgentResponse, "done", lambda _self: "DONE")
+
+    result = await tl.run()
+
+    assert called["create"] is True
+    assert result == "DONE"
+
+
+@pytest.mark.asyncio
+async def test_run_applies_project_templates_when_requested(monkeypatch):
+    # Set templates and ensure files list is empty -> triggers template application branch
+    tl = _make_tl(epics=[{"completed": False}], templates={"starter": {}}, files=[])
+    flags = {"applied": False}
+
+    async def _apply():
+        flags["applied"] = True
+
+    monkeypatch.setattr(tl, "apply_project_templates", _apply)
+    monkeypatch.setattr(AgentResponse, "done", lambda _self: "DONE")
+
+    result = await tl.run()
+
+    assert flags["applied"] is True
+    assert tl.next_state.action == "Apply project templates"
+    assert result == "DONE"
+
+
+@pytest.mark.asyncio
+async def test_run_plans_first_incomplete_epic_when_present(monkeypatch):
+    # Avoid templates branch by providing non-empty files list
+    epics = [{"name": "E1", "completed": False}, {"name": "E2", "completed": True}]
+    tl = _make_tl(epics=epics, templates=None, files=["already_has_files"])
+    called = {"epic_arg": None}
+
+    async def _plan(epic):
+        called["epic_arg"] = epic
+        return "PLANNED"
+
+    monkeypatch.setattr(tl, "plan_epic", _plan)
+
+    result = await tl.run()
+
+    assert tl.next_state.action == "Create a development plan"
+    assert called["epic_arg"] == epics[0]  # first incomplete epic chosen
+    assert result == "PLANNED"
