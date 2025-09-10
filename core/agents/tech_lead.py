@@ -52,11 +52,34 @@ class TechLead(RelevantFilesMixin, BaseAgent):
     async def run(self) -> AgentResponse:
         state = self.current_state
 
-        # If there are no epics yet, create the initial project epic
-        if not state.epics:
-            self.create_initial_project_epic()
-            return AgentResponse.done(self)
+# --- core/agents/tech_lead.py
 
+# 1) In plan_epic(...), use the passed-in epic instead of current_state.current_epic
+     def plan_epic(self, epic, ...):
+         # ...
+        task_type=epic.get("source", "app"),
+         # ...
+
+# 2) In create_initial_project_epic(), record the new epic as current_epic
+     def create_initial_project_epic(self):
+         log.debug("Creating initial project Epic")
+-        self.next_state.epics = self.current_state.epics + [
+        new_epic = {
+             "id": uuid4().hex,
+             "name": "Initial Project",
+             "source": "app",
+             "description": self.current_state.specification.description,
+             "test_instructions": None,
+             "summary": None,
+             "completed": False,
+             "complexity": self.current_state.specification.complexity,
+             "sub_epics": [],
+-            }
+        }
+        self.next_state.epics = self.current_state.epics + [new_epic]
+        self.next_state.current_epic = new_epic
+         self.next_state.relevant_files = None
+         self.next_state.modified_files = {}
         # Building frontend is the first epic - if the only epic is completed, start the initial project
         if len(state.epics) == 1 and state.epics[0].get("completed"):
             self.create_initial_project_epic()
