@@ -25,4 +25,9 @@ class DjangoPostgresProjectTemplate(BaseProjectTemplate):
     options_description = ""
 
     async def install_hook(self):
+        """
+        Install project dependencies by running `pip install -r requirements.txt`.
+        
+        This coroutine delegates execution to the template's process manager and awaits the command's completion.
+        """
         await self.process_manager.run_command("pip install -r requirements.txt")

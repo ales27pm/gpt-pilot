@@ -10,6 +10,12 @@ db.init_app(app)
 
 @app.route("/")
 def index():
+    """
+    Render the application's home page.
+    
+    Returns:
+        str: Rendered 'index.html' template for the root URL.
+    """
     return render_template("index.html")
 
 

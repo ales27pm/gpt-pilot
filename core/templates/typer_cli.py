@@ -22,4 +22,11 @@ class TyperCliProjectTemplate(BaseProjectTemplate):
     options_description = ""
 
     async def install_hook(self):
+        """
+        Run installation of Python dependencies for the generated project.
+        
+        This asynchronous hook invokes the template's process manager to execute
+        `pip install -r requirements.txt` in the current working directory, installing
+        packages listed in the generated requirements.txt file.
+        """
         await self.process_manager.run_command("pip install -r requirements.txt")
