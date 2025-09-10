@@ -1,6 +1,7 @@
 import asyncio
 import os.path
 import traceback
+from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
@@ -55,7 +56,7 @@ class StateManager:
         self.current_state = None
         self.next_state = None
         self.current_session = None
-        self.blockDb = False
+        self.db_lock = asyncio.Lock()
         self.git_available = False
         self.git_used = False
         self.options = {}
@@ -68,14 +69,9 @@ class StateManager:
 
     @asynccontextmanager
     async def db_blocker(self):
-        while self.blockDb:
-            await asyncio.sleep(0.1)  # Wait if blocked
-
-        try:
-            self.blockDb = True  # Set the block
+        """Async lock protecting database access."""
+        async with self.db_lock:
             yield
-        finally:
-            self.blockDb = False  # Unset the block
 
     async def list_projects(self) -> list[Project]:
         """
@@ -625,8 +621,11 @@ class StateManager:
 
         :return: List of implemented pages.
         """
-        # TODO - use self.current_state plus response from the FE iteration
-        page_files = [file.path for file in self.next_state.files if "client/src/pages" in file.path]
+        page_files = []
+        for file in self.next_state.files:
+            path = Path(file.path)
+            if path.parts[:3] == ("client", "src", "pages"):
+                page_files.append(file.path)
         return page_files
 
     async def update_implemented_pages_and_apis(self):
@@ -685,46 +684,63 @@ class StateManager:
         for file in self.next_state.files:
             if "client/src/api" not in file.path:
                 continue
+
             session = inspect(file).async_session
             result = await session.execute(select(FileContent).where(FileContent.id == file.content_id))
             file_content = result.scalar_one_or_none()
             content = file_content.content
             lines = content.splitlines()
+
             for i, line in enumerate(lines):
-                if "// Description:" in line:
-                    # TODO: Make this better!!!
-                    description = line.split("Description:")[1]
-                    endpoint = lines[i + 1].split("Endpoint:")[1] if len(lines[i + 1].split("Endpoint:")) > 1 else ""
-                    request = lines[i + 2].split("Request:")[1] if len(lines[i + 2].split("Request:")) > 1 else ""
-                    response = lines[i + 3].split("Response:")[1] if len(lines[i + 3].split("Response:")) > 1 else ""
-                    backend = (
-                        next(
-                            (
-                                api
-                                for api in self.current_state.knowledge_base.get("apis", [])
-                                if api["endpoint"] == endpoint.strip()
-                            ),
-                            {},
-                        )
-                        .get("locations", {})
-                        .get("backend", None)
+                line = line.strip()
+                if not line.startswith("// Description:"):
+                    continue
+
+                description = line.split(":", 1)[1].strip()
+                data = {"endpoint": "", "request": "", "response": ""}
+                # Scan subsequent lines for metadata in any order
+                for next_line in lines[i+1:]:
+                    next_line = next_line.strip()
+                    if next_line.startswith("// Description:"):
+                        break  # Stop if a new description starts
+                    for key in ["Endpoint", "Request", "Response"]:
+                        prefix = f"// {key}:"
+                        if next_line.startswith(prefix):
+                            data[key.lower()] = next_line.split(":", 1)[1].strip()
+                for next_line in lines[i + 1 :]:
+                    next_line = next_line.strip()
+                    if next_line.startswith("// Description:"):
+                        break
+                    for key in ["Endpoint", "Request", "Response"]:
+                        prefix = f"// {key}:"
+                        if next_line.startswith(prefix):
+                            data[key.lower()] = next_line.split(":", 1)[1].strip()
+
+                backend = (
+                    next(
+                        (
+                            api
+                            for api in self.current_state.knowledge_base.get("apis", [])
+                            if api["endpoint"] == data["endpoint"]
+                        ),
+                        {},
                     )
-                    apis.append(
-                        {
-                            "description": description.strip(),
-                            "endpoint": endpoint.strip(),
-                            "request": request.strip(),
-                            "response": response.strip(),
-                            "locations": {
-                                "frontend": {
-                                    "path": file.path,
-                                    "line": i - 1,
-                                },
-                                "backend": backend,
-                            },
-                            "status": "implemented" if backend is not None else "mocked",
-                        }
-                    )
+                    .get("locations", {})
+                    .get("backend", None)
+                )
+                apis.append(
+                    {
+                        "description": description,
+                        "endpoint": data["endpoint"],
+                        "request": data["request"],
+                        "response": data["response"],
+                        "locations": {
+                            "frontend": {"path": file.path, "line": i - 1},
+                            "backend": backend,
+                        },
+                        "status": "implemented" if backend is not None else "mocked",
+                    }
+                )
         return apis
 
     async def update_apis(self, files_with_implemented_apis: list[dict] = []):
@@ -734,14 +750,13 @@ class StateManager:
         """
         apis = await self.get_apis()
         for file in files_with_implemented_apis:
-            for endpoint in file["related_api_endpoints"]:
+            for endpoint_info in file["endpoints"]:
+                endpoint = endpoint_info["endpoint"]
+                line = endpoint_info["line"]
                 api = next((api for api in apis if (endpoint in api["endpoint"])), None)
                 if api is not None:
                     api["status"] = "implemented"
-                    api["locations"]["backend"] = {
-                        "path": file["path"],
-                        "line": file["line"],
-                    }
+                    api["locations"]["backend"] = {"path": file["path"], "line": line}
         self.next_state.knowledge_base["apis"] = apis
         self.next_state.flag_knowledge_base_as_modified()
         await self.ui.knowledge_base_update(self.next_state.knowledge_base)

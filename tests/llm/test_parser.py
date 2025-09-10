@@ -33,7 +33,7 @@ def test_multi_code_block_parser(input, expected):
         ("", None),
         ("some text without code blocks", None),
         ("```py\nsome code\n```", "some code"),
-        ("```\nfirst\n```\n ... \n```\nsecond\n```", None),
+        ("```\nfirst\n```\n ... \n```\nsecond\n```", "first\nsecond"),
     ],
 )
 def test_code_block_parser(input, expected):

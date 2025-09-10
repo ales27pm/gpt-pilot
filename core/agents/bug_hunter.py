@@ -53,8 +53,11 @@ class BugHunter(ChatWithBreakdownMixin, BaseAgent):
         if "bug_reproduction_description" not in current_iteration:
             await self.get_bug_reproduction_instructions()
         if current_iteration["status"] == IterationStatus.HUNTING_FOR_BUG:
-            # TODO determine how to find a bug (eg. check in db, ask user a question, etc.)
-            return await self.check_logs()
+            cycles = current_iteration.get("bug_hunting_cycles") or []
+            if cycles and (cycles[-1].get("backend_logs") or cycles[-1].get("frontend_logs")):
+                return await self.check_logs()
+            await self.ui.send_bug_hunter_status("close_status", 0)
+            return await self.ask_user_to_test(True, False)
         elif current_iteration["status"] == IterationStatus.AWAITING_USER_TEST:
             await self.ui.send_bug_hunter_status("close_status", 0)
             return await self.ask_user_to_test(False, True)

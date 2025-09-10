@@ -113,11 +113,9 @@ class CodeBlockParser(MultiCodeBlockParser):
 
     def __call__(self, text: str) -> str:
         blocks = super().__call__(text)
-        # FIXME: if there are more than 1 code block, this means the output actually contains ```,
-        # so re-parse this with that in mind
-        if len(blocks) != 1:
-            raise ValueError(f"Expected a single code block, got {len(blocks)}")
-        return blocks[0]
+        if len(blocks) == 0:
+            raise ValueError("Expected a code block, got none")
+        return "\n".join(blocks) if len(blocks) > 1 else blocks[0]
 
 
 class OptionalCodeBlockParser:

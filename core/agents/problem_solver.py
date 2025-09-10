@@ -14,12 +14,8 @@ log = get_logger(__name__)
 
 
 class AlternativeSolutions(BaseModel):
-    # FIXME: This is probably extra leftover from some dead code in the old implementation
-    description_of_tried_solutions: str = Field(
-        description="A description of the solutions that were tried to solve the recurring issue that was labeled as loop by the user.",
-    )
     alternative_solutions: list[str] = Field(
-        description=("List of all alternative solutions to the recurring issue that was labeled as loop by the user.")
+        description="List of alternative solutions for the recurring issue."
     )
 
 
