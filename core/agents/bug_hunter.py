@@ -56,7 +56,7 @@ class BugHunter(ChatWithBreakdownMixin, BaseAgent):
             cycles = current_iteration.get("bug_hunting_cycles") or []
             if cycles and (cycles[-1].get("backend_logs") or cycles[-1].get("frontend_logs")):
                 return await self.check_logs()
-            await self.ui.send_bug_hunter_status("close_status", 0)
+            await self.ui.send_bug_hunter_status("close_status", len(cycles))
             return await self.ask_user_to_test(True, False)
         elif current_iteration["status"] == IterationStatus.AWAITING_USER_TEST:
             await self.ui.send_bug_hunter_status("close_status", 0)
@@ -128,6 +128,13 @@ class BugHunter(ChatWithBreakdownMixin, BaseAgent):
 
     async def ask_user_to_test(self, awaiting_bug_reproduction: bool = False, awaiting_user_test: bool = False):
         await self.ui.stop_app()
+        cycles = self.next_state.current_iteration.get("bug_hunting_cycles")
+        if cycles is None:
+            cycles = list(self.current_state.current_iteration.get("bug_hunting_cycles") or [])
+            self.next_state.current_iteration["bug_hunting_cycles"] = cycles
+        if not cycles:
+            cycles.append({})
+            self.next_state.flag_iterations_as_modified()
         test_instructions = self.current_state.current_iteration["bug_reproduction_description"]
         await self.ui.send_message(
             "Start the app and test it by following these instructions:\n\n", source=pythagora_source
