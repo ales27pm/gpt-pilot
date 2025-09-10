@@ -107,21 +107,24 @@ class Orchestrator(BaseAgent, GitMixin):
 
                 if should_update_knowledge_base:
                     files_with_implemented_apis = []
+                    file_cache: dict[str, str] = {}
                     for single_agent in agent:
                         endpoints = single_agent.step.get("related_api_endpoints")
                         path = single_agent.step.get("save_file", {}).get("path", None)
                         if not endpoints or not path:
                             continue
-                        file_obj = await self.state_manager.get_file_by_path(path)
-                        content = file_obj.content.content if file_obj else ""
+                        if path not in file_cache:
+                            file_obj = await self.state_manager.get_file_by_path(path)
+                            file_cache[path] = file_obj.content.content if file_obj else ""
+                        content = file_cache[path]
                         endpoint_infos = []
                         for endpoint in endpoints:
-                            line_num = 0
-                            for i, line in enumerate(content.splitlines(), start=1):
-                                if endpoint in line:
-                                    line_num = i
-                                    break
-                            endpoint_infos.append({"endpoint": endpoint, "line": line_num})
+                            line_nums = [
+                                i
+                                for i, line in enumerate(content.splitlines(), start=1)
+                                if endpoint in line
+                            ]
+                            endpoint_infos.append({"endpoint": endpoint, "lines": line_nums})
                         files_with_implemented_apis.append({"path": path, "endpoints": endpoint_infos})
                     await self.state_manager.update_apis(files_with_implemented_apis)
                     await self.state_manager.update_implemented_pages_and_apis()

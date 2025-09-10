@@ -67,7 +67,7 @@ class Executor(BaseAgent):
 
     async def exit_handler(self, process):
         """Handle process exit events by reporting the return code."""
-        returncode = process._process.returncode
+        returncode = process.returncode
         msg = f"\nCommand `{process.cmd}` exited with code {returncode}\n"
         await self.ui.send_stream_chunk(msg, source=self.cmd_ui_source)
 

@@ -623,8 +623,8 @@ class StateManager:
         """
         page_files = []
         for file in self.next_state.files:
-            parts = Path(file.path).parts
-            if "pages" in parts:
+            path = Path(file.path)
+            if path.parts[:3] == ("client", "src", "pages"):
                 page_files.append(file.path)
         return page_files
 
@@ -698,9 +698,11 @@ class StateManager:
 
                 description = line.split(":", 1)[1].strip()
                 data = {"endpoint": "", "request": "", "response": ""}
-                for offset, key in enumerate(["Endpoint", "Request", "Response"], start=1):
-                    if i + offset < len(lines):
-                        next_line = lines[i + offset].strip()
+                for next_line in lines[i + 1 :]:
+                    next_line = next_line.strip()
+                    if next_line.startswith("// Description:"):
+                        break
+                    for key in ["Endpoint", "Request", "Response"]:
                         prefix = f"// {key}:"
                         if next_line.startswith(prefix):
                             data[key.lower()] = next_line.split(":", 1)[1].strip()
