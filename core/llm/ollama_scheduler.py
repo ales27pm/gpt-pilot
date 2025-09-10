@@ -1,103 +1,100 @@
 from __future__ import annotations
 
 import asyncio
-import heapq
 from dataclasses import dataclass, field
-from typing import List, Optional
 
 
 @dataclass(order=True)
 class OllamaJob:
-    """Represents a job executed via an Ollama model.
-
-    The dataclass is orderable by ``priority`` so it can be stored in a
-    priority queue.  Lower ``priority`` values represent more important jobs.
-    """
+    """Represents a job executed via an Ollama model."""
 
     priority: int
     prompt: str = field(compare=False, default="")
     model: str = field(compare=False, default="")
     cpu_threads: int = field(compare=False, default=1)
-    gpu_mem_mb: int = field(compare=False, default=0)
+    gpu_mem_mb: int = field(compare=False, default=1)
     _future: asyncio.Future[str] = field(init=False, repr=False, compare=False)
+
+
+class WeightedSemaphore:
+    """Semaphore that allows acquiring multiple units at once."""
+
+    def __init__(self, value: int) -> None:
+        self.sem = asyncio.Semaphore(value)
+
+    async def acquire(self, n: int) -> None:
+        for _ in range(n):
+            await self.sem.acquire()
+
+    def release(self, n: int) -> None:
+        for _ in range(n):
+            self.sem.release()
 
 
 class OllamaScheduler:
     """Cooperative scheduler for CPU/GPU bound Ollama jobs.
 
-    The scheduler tracks available CPU threads and GPU memory and executes
-    jobs in two stages: a CPU preprocessing phase followed by a GPU inference
-    phase.  Multiple GPU jobs may run concurrently so long as sufficient memory
-    is available.  The implementation is intentionally lightweight but includes
-    error handling and resource accounting to remain robust during testing.
+    Jobs are executed in two phases: a CPU preprocessing stage followed by a
+    GPU inference stage.  CPU threads are managed by a standard semaphore while
+    GPU memory is tracked via a weighted semaphore so multiple jobs can share
+    the GPU concurrently as long as sufficient memory is available.
     """
 
     def __init__(self, total_cpu_threads: int, total_gpu_mem: int) -> None:
         self.total_cpu_threads = total_cpu_threads
         self.total_gpu_mem = total_gpu_mem
-        self.cpu_free = total_cpu_threads
-        self.gpu_mem_free = total_gpu_mem
-        self._cpu_queue: asyncio.PriorityQueue[OllamaJob] = asyncio.PriorityQueue()
-        self._gpu_queue: List[OllamaJob] = []  # heapq based priority queue
-        self._gpu_running: List[OllamaJob] = []
-        self.max_gpu_concurrency = 0
+        self._cpu_sem = asyncio.Semaphore(total_cpu_threads)
+        self._gpu_ws = WeightedSemaphore(total_gpu_mem)
+        self._queue: asyncio.PriorityQueue[OllamaJob] = asyncio.PriorityQueue()
         self.completed: list[OllamaJob] = []
-        self._lock = asyncio.Lock()
+        self._gpu_active = 0
+        self.max_gpu_concurrency = 0
+
+    @property
+    def cpu_free(self) -> int:
+        return self._cpu_sem._value
+
+    @property
+    def gpu_mem_free(self) -> int:
+        return self._gpu_ws.sem._value
 
     async def submit(self, job: OllamaJob) -> str:
         """Submit a job and wait for its completion."""
 
-        job._future = asyncio.get_event_loop().create_future()
-        await self._cpu_queue.put(job)
-        async with self._lock:
-            await self._schedule()
+        if job.cpu_threads <= 0 or job.gpu_mem_mb <= 0:
+            raise ValueError("cpu_threads and gpu_mem_mb must be positive")
+        if job.cpu_threads > self.total_cpu_threads or job.gpu_mem_mb > self.total_gpu_mem:
+            raise ValueError("Requested resources exceed scheduler limits")
+
+        loop = asyncio.get_running_loop()
+        job._future = loop.create_future()
+        await self._queue.put(job)
+        # start worker to process queue
+        asyncio.create_task(self._worker())
         return await job._future
 
-    async def _schedule(self) -> None:
-        """Run scheduling loops for CPU and GPU queues."""
+    async def _worker(self) -> None:
+        while not self._queue.empty():
+            job: OllamaJob = await self._queue.get()
 
-        made_progress = True
-        while made_progress:
-            made_progress = False
+            # CPU phase
+            await self._cpu_sem.acquire()
+            try:
+                await asyncio.sleep(0)  # Simulate CPU bound work
+            finally:
+                self._cpu_sem.release()
 
-            # CPU scheduling: start preprocessing for jobs that fit available CPU
-            while not self._cpu_queue.empty():
-                job = await self._cpu_queue.get()
-                if job.cpu_threads <= self.cpu_free:
-                    self.cpu_free -= job.cpu_threads
-                    asyncio.create_task(self._run_preprocess(job))
-                    made_progress = True
-                else:
-                    await self._cpu_queue.put(job)
-                    break
-
-            # GPU scheduling
-            while self._gpu_queue and self._gpu_queue[0].gpu_mem_mb <= self.gpu_mem_free:
-                job = heapq.heappop(self._gpu_queue)
-                self.gpu_mem_free -= job.gpu_mem_mb
-                asyncio.create_task(self._run_gpu(job))
-                made_progress = True
-
-    async def _run_preprocess(self, job: OllamaJob) -> None:
-        try:
-            await asyncio.sleep(0)  # Simulate CPU bound work
-        finally:
-            self.cpu_free += job.cpu_threads
-            async with self._lock:
-                heapq.heappush(self._gpu_queue, job)
-                await self._schedule()
-    async def _run_gpu(self, job: OllamaJob) -> None:
-        self._gpu_running.append(job)
-        self.max_gpu_concurrency = max(self.max_gpu_concurrency, len(self._gpu_running))
-        try:
-            await asyncio.sleep(0)  # Simulate GPU inference
-        finally:
-            self.gpu_mem_free += job.gpu_mem_mb
-            self._gpu_running.remove(job)
-            self.completed.append(job)
-            job._future.set_result(job.prompt)
-            async with self._lock:
-                await self._schedule()
+            # GPU phase
+            await self._gpu_ws.acquire(job.gpu_mem_mb)
+            self._gpu_active += 1
+            self.max_gpu_concurrency = max(self.max_gpu_concurrency, self._gpu_active)
+            try:
+                await asyncio.sleep(0)  # Simulate GPU inference
+                self.completed.append(job)
+                job._future.set_result(job.prompt)
+            finally:
+                self._gpu_active -= 1
+                self._gpu_ws.release(job.gpu_mem_mb)
 
 
-__all__ = ["OllamaJob", "OllamaScheduler"]
+__all__ = ["OllamaJob", "OllamaScheduler", "WeightedSemaphore"]
