@@ -51,6 +51,10 @@ class TechLead(RelevantFilesMixin, BaseAgent):
 
     async def run(self) -> AgentResponse:
         state = self.current_state
+        # When there are no epics yet, create the initial project epic
+        if not state.epics:
+            self.create_initial_project_epic()
+            return AgentResponse.done(self)
         # Building frontend is the first epic - if the only epic is completed, start the initial project
         if len(state.epics) == 1 and state.epics[0].get("completed"):
             self.create_initial_project_epic()
@@ -259,11 +263,6 @@ class TechLead(RelevantFilesMixin, BaseAgent):
         )
 
         self.update_epics_and_tasks(response.text)
-
-        await self.ui.send_epics_and_tasks(
-            self.next_state.current_epic["sub_epics"],
-            self.next_state.tasks,
-        )
 
         await telemetry.trace_code_event(
             "development-plan",

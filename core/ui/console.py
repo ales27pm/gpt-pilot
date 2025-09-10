@@ -122,7 +122,11 @@ class PlainConsoleUI(UIBase):
         session: PromptSession[str] = PromptSession("> ")
 
         prompt_kwargs: dict[str, object] = {"default": initial_text or ""}
-        if "placeholder" in inspect.signature(session.prompt_async).parameters:
+        try:
+            sig = inspect.signature(session.prompt_async)
+        except (ValueError, TypeError):
+            sig = None
+        if sig and "placeholder" in sig.parameters:
             prompt_kwargs["placeholder"] = placeholder
 
         while True:
