@@ -36,13 +36,9 @@ async def ensure_server():
     try:
         await client.list()
     except Exception as exc:  # pragma: no cover - network dependent
-        raise RuntimeError(
-            f"Could not connect to Ollama server at {OLLAMA_HOST}. "
-            "Make sure it is running."
-        ) from exc
+        raise RuntimeError(f"Could not connect to Ollama server at {OLLAMA_HOST}. Make sure it is running.") from exc
 
 
 if __name__ == "__main__":
     asyncio.run(ensure_server())
     gr.ChatInterface(respond, title="Ollama Chat").launch()
-

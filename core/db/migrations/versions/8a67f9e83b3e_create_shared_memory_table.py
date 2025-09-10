@@ -28,11 +28,7 @@ def upgrade() -> None:
     if use_pgvector:
         # Use native UUID type with default in Postgres
         id_col = sa.Column(
-            "id",
-            pg.UUID(as_uuid=False),
-            primary_key=True,
-            nullable=False,
-            server_default=sa.text("gen_random_uuid()")
+            "id", pg.UUID(as_uuid=False), primary_key=True, nullable=False, server_default=sa.text("gen_random_uuid()")
         )
         # Ensure pgcrypto for gen_random_uuid
         op.execute("CREATE EXTENSION IF NOT EXISTS pgcrypto")

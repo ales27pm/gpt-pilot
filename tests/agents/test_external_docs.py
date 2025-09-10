@@ -13,14 +13,17 @@ async def test_stores_documentation_snippets_for_task(agentcontext):
     sm.current_state.tasks = [{"description": "Some VueJS task", "status": "todo"}]
     await sm.commit()
 
-    with patch.object(
-        ExternalDocumentation,
-        "_get_available_docsets",
-        AsyncMock(return_value=[("vuejs-api-ref", "VueJS API Reference")]),
-    ), patch.object(
-        ExternalDocumentation,
-        "_fetch_snippets",
-        AsyncMock(return_value=[("vuejs-api-ref", ["snippet"])]),
+    with (
+        patch.object(
+            ExternalDocumentation,
+            "_get_available_docsets",
+            AsyncMock(return_value=[("vuejs-api-ref", "VueJS API Reference")]),
+        ),
+        patch.object(
+            ExternalDocumentation,
+            "_fetch_snippets",
+            AsyncMock(return_value=[("vuejs-api-ref", ["snippet"])]),
+        ),
     ):
         ed = ExternalDocumentation(sm, ui)
         ed.get_llm = mock_llm(

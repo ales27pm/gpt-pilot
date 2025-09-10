@@ -14,9 +14,7 @@ log = get_logger(__name__)
 
 
 class AlternativeSolutions(BaseModel):
-    alternative_solutions: list[str] = Field(
-        description="List of alternative solutions for the recurring issue."
-    )
+    alternative_solutions: list[str] = Field(description="List of alternative solutions for the recurring issue.")
 
 
 class ProblemSolver(IterationPromptMixin, BaseAgent):
@@ -107,7 +105,7 @@ class ProblemSolver(IterationPromptMixin, BaseAgent):
             buttons[str(i)] = str(i + 1)
         buttons["none"] = "None of these"
 
-        solutions_txt = "\n\n".join([f"{i+1}: {s['description']}" for i, s in enumerate(solutions)])
+        solutions_txt = "\n\n".join([f"{i + 1}: {s['description']}" for i, s in enumerate(solutions)])
         user_response = await self.ask_question(
             "Choose which solution would you like Pythagora to try next:\n\n" + solutions_txt,
             buttons=buttons,

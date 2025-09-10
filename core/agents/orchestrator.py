@@ -94,7 +94,10 @@ class Orchestrator(BaseAgent, GitMixin):
                 for single_agent, single_response in zip(agent, responses):
                     await self.message_broker.publish(
                         "agent.finish",
-                        {"agent": single_agent.agent_type, "status": single_response.type.value if single_response else "unknown"},
+                        {
+                            "agent": single_agent.agent_type,
+                            "status": single_response.type.value if single_response else "unknown",
+                        },
                     )
                 response = self.handle_parallel_responses(agent[0], responses)
 
@@ -119,11 +122,7 @@ class Orchestrator(BaseAgent, GitMixin):
                         content = file_cache[path]
                         endpoint_infos = []
                         for endpoint in endpoints:
-                            line_nums = [
-                                i
-                                for i, line in enumerate(content.splitlines(), start=1)
-                                if endpoint in line
-                            ]
+                            line_nums = [i for i, line in enumerate(content.splitlines(), start=1) if endpoint in line]
                             endpoint_infos.append({"endpoint": endpoint, "lines": line_nums})
                         files_with_implemented_apis.append({"path": path, "endpoints": endpoint_infos})
                     await self.state_manager.update_apis(files_with_implemented_apis)
