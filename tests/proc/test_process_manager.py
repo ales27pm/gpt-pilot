@@ -11,12 +11,19 @@ from core.proc.process_manager import LocalProcess, ProcessManager
 
 if sys.platform == "win32":
     # Build command manually to avoid cmd.exe quoting issues that can cause the
-    # process to exit immediately before tests can inspect it.
+    # process to exit immediately before tests can inspect it. Python on Windows
+    # requires additional environment variables beyond PATH to start correctly.
     SLEEP_CMD = f'"{sys.executable}" -c "import time; time.sleep(5)"'
+    ENV = {
+        "PATH": getenv("PATH"),
+        "SYSTEMROOT": getenv("SYSTEMROOT"),
+        "SYSTEMDRIVE": getenv("SYSTEMDRIVE"),
+    }
 else:
     import shlex
 
     SLEEP_CMD = " ".join(shlex.quote(arg) for arg in [sys.executable, "-c", "import time; time.sleep(5)"])
+    ENV = {"PATH": getenv("PATH")}
 
 
 @pytest.mark.asyncio
@@ -26,13 +33,13 @@ async def test_local_process_start_terminate(tmp_path):
     lp = await LocalProcess.start(
         cmd,
         cwd=tmp_path,
-        env={"PATH": getenv("PATH")},
+        env=ENV,
         bg=False,
     )
 
     assert lp.cmd == cmd
     assert lp.cwd == tmp_path
-    assert lp.env == {"PATH": getenv("PATH")}
+    assert lp.env == ENV
     assert lp.stdout == ""
     assert lp.stderr == ""
 
@@ -51,7 +58,7 @@ async def test_local_process_wait(tmp_path):
     lp = await LocalProcess.start(
         cmd,
         cwd=tmp_path,
-        env={"PATH": getenv("PATH")},
+        env=ENV,
         bg=False,
     )
 
@@ -69,7 +76,7 @@ async def test_local_process_wait_handles_unresponsive_process(tmp_path):
     lp = await LocalProcess.start(
         cmd,
         cwd=tmp_path,
-        env={"PATH": getenv("PATH")},
+        env=ENV,
         bg=False,
         kill_wait_timeout=0.1,
     )
