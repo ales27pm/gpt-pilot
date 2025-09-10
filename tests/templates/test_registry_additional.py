@@ -2,6 +2,7 @@ import importlib
 import sys
 import types
 from contextlib import contextmanager
+
 import pytest
 
 # Test framework note: Using pytest.
@@ -21,6 +22,7 @@ REQUIRED_TEMPLATES = [
     ("vite_react", "ViteReactProjectTemplate"),
 ]
 
+
 @contextmanager
 def ensure_package(path_parts, as_package=True):
     """
@@ -29,9 +31,8 @@ def ensure_package(path_parts, as_package=True):
     """
     created = []
     try:
-        parent_name = None
         for i in range(len(path_parts)):
-            name = ".".join(path_parts[:i+1])
+            name = ".".join(path_parts[: i + 1])
             if name not in sys.modules:
                 mod = types.ModuleType(name)
                 if as_package:
@@ -39,21 +40,24 @@ def ensure_package(path_parts, as_package=True):
                     mod.__path__ = []  # type: ignore[attr-defined]
                 sys.modules[name] = mod
                 created.append(name)
-            parent_name = name
         yield ".".join(path_parts)
     finally:
         # Clean up only those we created (not to disturb test runner modules)
         for name in reversed(created):
             sys.modules.pop(name, None)
 
+
 def build_template_stub(name_value: str):
     """
     Create a stub class having a .name class attribute and simple identity semantics.
     """
+
     class _Stub:
         name = name_value
+
     _Stub.__name__ = f"Stub<{name_value}>"
     return _Stub
+
 
 def inject_sibling_modules(pkg_name: str, override_missing_name: bool = False):
     """
@@ -78,9 +82,11 @@ def inject_sibling_modules(pkg_name: str, override_missing_name: bool = False):
         injected.append(full_mod)
     return injected
 
+
 def remove_modules(mod_names):
     for n in mod_names:
         sys.modules.pop(n, None)
+
 
 def import_registry(preferred_pkg="templates"):
     """
@@ -94,6 +100,7 @@ def import_registry(preferred_pkg="templates"):
     except ModuleNotFoundError:
         # Fallback: tests.templates.test_registry (path provided in diff)
         return importlib.import_module("tests.templates.test_registry")
+
 
 class TestRegistryEnumAndMapping:
     def test_enum_members_and_types(self):
@@ -176,6 +183,7 @@ class TestRegistryEnumAndMapping:
                     importlib.reload(mod)
             finally:
                 remove_modules(injected)
+
 
 class TestLoggingPresence:
     def test_logger_is_defined(self):

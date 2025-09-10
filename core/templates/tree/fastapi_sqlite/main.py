@@ -1,6 +1,6 @@
 from fastapi import FastAPI
-from sqlmodel import SQLModel, Session, create_engine
 from models import User
+from sqlmodel import Session, SQLModel, create_engine
 
 app = FastAPI()
 engine = create_engine("sqlite:///app.db")
