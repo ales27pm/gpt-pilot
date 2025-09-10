@@ -16,6 +16,7 @@ if [ -d venv ]; then
   source venv/bin/activate
 fi
 
+# start_frontend starts the frontend dev server in the background if Node.js and npm (Node >= 18) are available; it installs dependencies if needed and sets FRONTEND_PID to the background process ID.
 start_frontend() {
   (
     cd frontend

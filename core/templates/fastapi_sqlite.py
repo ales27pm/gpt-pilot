@@ -24,4 +24,9 @@ class FastapiSqliteProjectTemplate(BaseProjectTemplate):
     options_description = ""
 
     async def install_hook(self):
+        """
+        Install project dependencies by running `pip install -r requirements.txt` using the template's process manager.
+        
+        This asynchronous hook invokes the template's process manager to execute the pip install command and completes when the command finishes.
+        """
         await self.process_manager.run_command("pip install -r requirements.txt")

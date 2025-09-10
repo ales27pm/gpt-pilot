@@ -50,6 +50,22 @@ class TechLead(RelevantFilesMixin, BaseAgent):
     display_name = "Tech Lead"
 
     async def run(self) -> AgentResponse:
+        """
+        Orchestrate the TechLead agent's main control flow to decide the next high-level action.
+        
+        Checks current state and branches to one of four flows:
+        - If there is exactly one epic and it's marked completed, create the initial project epic and finish.
+        - If project templates exist and no files have been created yet, apply templates, set next_state.action to "Apply project templates", and finish.
+        - If any epics are incomplete, choose the current epic (if set) or the first incomplete epic, set next_state.action to "Create a development plan", and delegate to plan_epic.
+        - If all epics are completed, prompt the user for a new feature via ask_for_new_feature.
+        
+        Returns:
+            AgentResponse: an AgentResponse indicating completion or the result of delegated planning/feature flows.
+        
+        Side effects:
+        - May call create_initial_project_epic(), apply_project_templates(), plan_epic(epic), or ask_for_new_feature().
+        - Updates self.next_state.action before delegating to plan/apply flows and may modify self.next_state via the called methods.
+        """
         state = self.current_state
 
         # Building frontend is the first epic - if the only epic is completed, start the initial project
@@ -74,6 +90,11 @@ class TechLead(RelevantFilesMixin, BaseAgent):
         return await self.ask_for_new_feature()
 
     def create_initial_project_epic(self):
+        """
+        Create and append the initial project epic to the next agent state.
+        
+        Appends a new epic named "Initial Project" (source "app") to self.next_state.epics, using the current specification's description and complexity. The new epic is created with a generated UUID id, empty sub_epics, not completed, and has test_instructions and summary set to None. Also clears next_state.relevant_files and resets next_state.modified_files to an empty dict.
+        """
         log.debug("Creating initial project Epic")
         self.next_state.epics = self.current_state.epics + [
             {

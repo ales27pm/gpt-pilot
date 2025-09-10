@@ -26,4 +26,11 @@ class FlaskSqliteProjectTemplate(BaseProjectTemplate):
     options_description = ""
 
     async def install_hook(self):
+        """
+        Install the template's Python dependencies by running "pip install -r requirements.txt".
+        
+        This asynchronous install hook uses the template's process manager to execute the pip
+        command in the current working directory so that the scaffolded project's requirements
+        are installed after generation.
+        """
         await self.process_manager.run_command("pip install -r requirements.txt")

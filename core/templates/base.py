@@ -76,12 +76,12 @@ class BaseProjectTemplate:
 
     async def apply(self) -> Optional[str]:
         """
-        Apply a project template to a new project.
-
-        :param template_name: The name of the template to apply.
-        :param state_manager: The state manager instance to save files to.
-        :param process_manager: The process manager instance to run install hooks with.
-        :return: A summary of the applied template, or None if no template was applied.
+        Apply this project template to the current project state and persist generated files.
+        
+        Renders the template tree using the current state (project name, folder, description), a generated secret, and the template options; saves each rendered file into the state manager (attaching per-file descriptions when available). After saving files, attempts to run the template's async install_hook (exceptions from the hook are caught and logged). The renderer that builds file paths uses the state manager's file_system.root when present, otherwise falls back to "/tmp". The filter() hook is used to rename or skip rendered files.
+        
+        Returns:
+            A rendered summary string produced from this template's "summary.tpl", or None if no summary is produced.
         """
         state = self.state_manager.current_state
         project_name = state.branch.project.name
