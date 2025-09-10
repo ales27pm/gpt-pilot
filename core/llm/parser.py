@@ -115,9 +115,7 @@ class CodeBlockParser(MultiCodeBlockParser):
         blocks = super().__call__(text)
         if len(blocks) == 0:
             raise ValueError("Expected a code block, got none")
-        if len(blocks) > 1:
-            return "\n".join(blocks)
-        return blocks[0]
+        return "\n".join(blocks) if len(blocks) > 1 else blocks[0]
 
 
 class OptionalCodeBlockParser:
