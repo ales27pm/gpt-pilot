@@ -1,5 +1,7 @@
 from os.path import exists, join
 
+import pytest
+
 from core.disk.ignore import IgnoreMatcher
 from core.disk.vfs import LocalDiskVFS, MemoryVFS
 
@@ -8,6 +10,8 @@ def test_memory_vfs():
     vfs = MemoryVFS()
 
     assert vfs.list() == []
+    with pytest.raises(FileNotFoundError):
+        vfs.read("missing.txt")
 
     vfs.save("test.txt", "hello world")
     assert vfs.read("test.txt") == "hello world"
@@ -32,6 +36,8 @@ def test_local_disk_vfs(tmp_path):
     vfs = LocalDiskVFS(tmp_path)
 
     assert vfs.list() == []
+    with pytest.raises(FileNotFoundError):
+        vfs.read("missing.txt")
 
     vfs.save("test.txt", "hello world")
     assert vfs.read("test.txt") == "hello world"
