@@ -33,7 +33,7 @@ class MessageBroker:
                 )
 
     def subscribe(self, topic: str) -> asyncio.Queue[Any]:
-        """Create and return a new queue for consuming messages from ``topic``."""
+        """Create and return a new bounded queue for ``topic`` messages."""
         queue: asyncio.Queue[Any] = asyncio.Queue(maxsize=self._maxsize)
         self._queues[topic].append(queue)
         return queue

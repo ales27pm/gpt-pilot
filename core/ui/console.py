@@ -12,16 +12,27 @@ log = get_logger(__name__)
 
 
 class PlainConsoleUI(UIBase):
-    """
-    UI adapter for plain (no color) console output.
-    """
+    """UI adapter for plain (no color) console output."""
 
-    async def start(self) -> bool:
-        log.debug("Console UI started")
+    def __init__(self) -> None:
         self._app_link: Optional[str] = None
         self._streaming_logs = False
         self._important_stream_open = False
         self._breakdown_stream_open = False
+
+    # -- helpers -----------------------------------------------------------------
+
+    def _write(self, text: str = "", *, end: str = "\n", flush: bool = False) -> None:
+        print(text, end=end, flush=flush)
+
+    def _marker(self, tag: str, detail: Optional[str] = None) -> None:
+        line = f"({tag})" if detail is None else f"({tag}) {detail}"
+        self._write(line)
+
+    # -- UIBase methods -----------------------------------------------------------
+
+    async def start(self) -> bool:
+        log.debug("Console UI started")
         return True
 
     async def stop(self):
@@ -29,12 +40,12 @@ class PlainConsoleUI(UIBase):
 
     async def send_stream_chunk(
         self, chunk: Optional[str], *, source: Optional[UISource] = None, project_state_id: Optional[str] = None
-    ):
+    ) -> None:
         if chunk is None:
             # end of stream
-            print("", flush=True)
+            self._write(flush=True)
         else:
-            print(chunk, end="", flush=True)
+            self._write(chunk, end="", flush=True)
 
     async def send_message(
         self,
@@ -45,9 +56,9 @@ class PlainConsoleUI(UIBase):
         extra_info: Optional[str] = None,
     ):
         if source:
-            print(f"[{source}] {message}")
+            self._write(f"[{source}] {message}")
         else:
-            print(message)
+            self._write(message)
 
     async def send_key_expired(self, message: Optional[str] = None):
         if message:
@@ -59,7 +70,7 @@ class PlainConsoleUI(UIBase):
         app_name: Optional[str] = None,
         folder_name: Optional[str] = None,
     ):
-        print(f"(app-finished) {app_id or ''} {app_name or ''} {folder_name or ''}")
+        self._marker("app-finished", f"{app_id or ''} {app_name or ''} {folder_name or ''}".strip())
 
     async def send_feature_finished(
         self,
@@ -67,7 +78,7 @@ class PlainConsoleUI(UIBase):
         app_name: Optional[str] = None,
         folder_name: Optional[str] = None,
     ):
-        print(f"(feature-finished) {app_id or ''} {app_name or ''} {folder_name or ''}")
+        self._marker("feature-finished", f"{app_id or ''} {app_name or ''} {folder_name or ''}".strip())
 
     def _print_question(
         self,
@@ -78,15 +89,15 @@ class PlainConsoleUI(UIBase):
         source: Optional[UISource],
     ) -> None:
         if source:
-            print(f"[{source}] {question}")
+            self._write(f"[{source}] {question}")
         else:
-            print(question)
+            self._write(question)
         if hint:
-            print(f"Hint: {hint}")
+            self._write(f"Hint: {hint}")
         if buttons:
             for k, v in buttons.items():
                 default_str = " (default)" if k == default else ""
-                print(f"  [{k}]: {v}{default_str}")
+                self._write(f"  [{k}]: {v}{default_str}")
 
     async def ask_question(
         self,
@@ -147,7 +158,7 @@ class PlainConsoleUI(UIBase):
                     return UserInput(button=text, text=None)
                 if buttons_only:
                     if verbose:
-                        print("Please choose one of available options")
+                        self._write("Please choose one of available options")
                     continue
 
             if not text and not allow_empty:
@@ -155,20 +166,20 @@ class PlainConsoleUI(UIBase):
                     text = default
                 else:
                     if verbose:
-                        print("Input required. Try again.")
+                        self._write("Input required. Try again.")
                     continue
 
             return UserInput(button=None, text=text)
 
     async def send_project_stage(self, data: JSONDict) -> None:
-        print(f"(project-stage) {data}")
+        self._marker("project-stage", str(data))
 
     async def send_epics_and_tasks(
         self,
         epics: JSONList | None = None,
         tasks: JSONList | None = None,
     ) -> None:
-        print(f"(epics-tasks) epics={epics} tasks={tasks}")
+        self._marker("epics-tasks", f"epics={epics} tasks={tasks}")
 
     async def send_task_progress(
         self,
@@ -180,8 +191,9 @@ class PlainConsoleUI(UIBase):
         source_index: int = 1,
         tasks: JSONList | None = None,
     ) -> None:
-        print(
-            f"(task-progress) {index}/{n_tasks} {description} [{status}] from {source}"
+        self._marker(
+            "task-progress",
+            f"{index}/{n_tasks} {description} [{status}] from {source}",
         )
 
     async def send_step_progress(
@@ -191,55 +203,59 @@ class PlainConsoleUI(UIBase):
         step: JSONDict,
         task_source: str,
     ) -> None:
-        print(f"(step-progress) {index}/{n_steps} {step} from {task_source}")
+        self._marker("step-progress", f"{index}/{n_steps} {step} from {task_source}")
 
     async def send_modified_files(
         self,
         modified_files: JSONList,
     ) -> None:
-        print("(modified-files)")
+        self._marker("modified-files")
         for f in modified_files:
-            print(f"  - {f}")
+            self._write(f"  - {f}")
 
     async def send_data_about_logs(
         self,
         data_about_logs: JSONDict,
     ) -> None:
-        print(f"(logs) {data_about_logs}")
+        self._marker("logs", str(data_about_logs))
 
     async def get_debugging_logs(self) -> tuple[str, str]:
         return "", ""
 
     async def send_run_command(self, run_command: str):
-        print(f"(run-command) {run_command}")
+        self._marker("run-command", run_command)
 
     async def send_app_link(self, app_link: str):
         self._app_link = app_link
-        print(f"(app-link) {app_link}")
+        self._marker("app-link", app_link)
 
     async def open_editor(self, file: str, line: Optional[int] = None):
-        print(f"(open-editor) {file}:{line if line is not None else ''}")
+        self._marker(
+            "open-editor", f"{file}:{line if line is not None else ''}"
+        )
 
     async def send_project_root(self, path: str):
-        print(f"(project-root) {path}")
+        self._marker("project-root", path)
 
     async def send_project_stats(self, stats: JSONDict):
-        print(f"(project-stats) {stats}")
+        self._marker("project-stats", str(stats))
 
     async def send_test_instructions(self, test_instructions: str, project_state_id: Optional[str] = None):
-        print(f"(test-instructions) {test_instructions}")
+        self._marker("test-instructions", test_instructions)
 
     async def knowledge_base_update(self, knowledge_base: JSONDict):
-        print(f"(knowledge-base) {knowledge_base}")
+        self._marker("knowledge-base", str(knowledge_base))
 
     async def send_file_status(self, file_path: str, file_status: str, source: Optional[UISource] = None):
         if source:
-            print(f"(file-status) {file_path}: {file_status} [{source}]")
+            self._marker(
+                "file-status", f"{file_path}: {file_status} [{source}]"
+            )
         else:
-            print(f"(file-status) {file_path}: {file_status}")
+            self._marker("file-status", f"{file_path}: {file_status}")
 
     async def send_bug_hunter_status(self, status: str, num_cycles: int):
-        print(f"(bug-hunter) {status} cycles={num_cycles}")
+        self._marker("bug-hunter", f"{status} cycles={num_cycles}")
 
     async def generate_diff(
         self,
@@ -250,35 +266,35 @@ class PlainConsoleUI(UIBase):
         n_del_lines: int = 0,
         source: Optional[UISource] = None,
     ):
-        print(f"(diff-open) {file_path}")
+        self._marker("diff-open", file_path)
 
     async def stop_app(self):
-        print("(stop-app)")
+        self._marker("stop-app")
 
     async def close_diff(self):
-        print("(diff-close)")
+        self._marker("diff-close")
 
     async def loading_finished(self):
-        print("(loading-finished)")
+        self._marker("loading-finished")
 
     async def send_project_description(self, description: str):
-        print(f"(project-description) {description}")
+        self._marker("project-description", description)
 
     async def send_features_list(self, features: list[str]):
-        print("(features-list)")
+        self._marker("features-list")
         for f in features:
-            print(f"  - {f}")
+            self._write(f"  - {f}")
 
     async def import_project(self, project_dir: str):
-        print(f"(import-project) {project_dir}")
+        self._marker("import-project", project_dir)
 
     async def start_important_stream(self):
         self._important_stream_open = True
-        print("(stream-important:start)")
+        self._marker("stream-important:start")
 
     async def start_breakdown_stream(self):
         self._breakdown_stream_open = True
-        print("(stream-breakdown:start)")
+        self._marker("stream-breakdown:start")
 
 
 __all__ = ["PlainConsoleUI"]

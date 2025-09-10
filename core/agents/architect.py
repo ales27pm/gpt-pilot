@@ -37,8 +37,8 @@ class AppType(str, Enum):
 class SystemDependency(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid")
 
-    name: StrictStr | None = Field(
-        None,
+    name: StrictStr = Field(
+        ...,
         description="Name of the system dependency, for example Node.js or Python.",
     )
     description: StrictStr | None = Field(
@@ -58,8 +58,8 @@ class SystemDependency(BaseModel):
 class PackageDependency(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid")
 
-    name: StrictStr | None = Field(
-        None,
+    name: StrictStr = Field(
+        ...,
         description="Name of the package dependency, for example Express or React.",
     )
     description: StrictStr | None = Field(
@@ -88,8 +88,8 @@ class Architecture(BaseModel):
 class TemplateSelection(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid")
 
-    architecture: StrictStr | None = Field(
-        None,
+    architecture: StrictStr = Field(
+        ...,
         description="General description of the app architecture.",
     )
     template: Optional[ProjectTemplateEnum] = Field(
