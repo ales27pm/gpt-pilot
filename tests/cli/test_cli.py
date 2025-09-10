@@ -157,7 +157,6 @@ def test_load_config_overridden(tmp_path):
 
 def test_show_default_config(capsys, monkeypatch):
     monkeypatch.setitem(sys.modules, "asyncpg", MagicMock())
-    monkeypatch.setitem(sys.modules, "psycopg2", MagicMock())
     loader.config = Config()
     show_config()
     captured = capsys.readouterr()

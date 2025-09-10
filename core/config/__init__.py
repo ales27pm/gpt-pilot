@@ -243,7 +243,7 @@ class DBConfig(_StrictModel):
             try:
                 import asyncpg  # noqa: F401
             except ImportError:
-                raise ValueError("To use PostgreSQL database, please install `asyncpg` and `psycopg2` packages")
+                raise ValueError("To use PostgreSQL database, please install the `asyncpg` package")
             return v
         raise ValueError(f"Unsupported database URL scheme in: {v}")
 

@@ -40,6 +40,6 @@ urllib3==2.2.3
 wcwidth==0.2.13
 pgvector==0.2.5
 asyncpg==0.29.0
-psycopg2-binary==2.9.9
+psycopg[binary]==3.2.10
 fastapi==0.116.1
 uvicorn==0.35.0
