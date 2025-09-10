@@ -126,15 +126,21 @@ class BugHunter(ChatWithBreakdownMixin, BaseAgent):
         self.next_state.flag_iterations_as_modified()
         return AgentResponse.done(self)
 
-    async def ask_user_to_test(self, awaiting_bug_reproduction: bool = False, awaiting_user_test: bool = False):
-        await self.ui.stop_app()
+    def _ensure_bug_hunting_cycles(self) -> list:
+        """Ensure bug_hunting_cycles list exists on next_state and has a slot."""
         cycles = self.next_state.current_iteration.get("bug_hunting_cycles")
         if cycles is None:
             cycles = list(self.current_state.current_iteration.get("bug_hunting_cycles") or [])
             self.next_state.current_iteration["bug_hunting_cycles"] = cycles
+            self.next_state.flag_iterations_as_modified()
         if not cycles:
             cycles.append({})
             self.next_state.flag_iterations_as_modified()
+        return cycles
+
+    async def ask_user_to_test(self, awaiting_bug_reproduction: bool = False, awaiting_user_test: bool = False):
+        await self.ui.stop_app()
+        self._ensure_bug_hunting_cycles()
         test_instructions = self.current_state.current_iteration["bug_reproduction_description"]
         await self.ui.send_message(
             "Start the app and test it by following these instructions:\n\n", source=pythagora_source

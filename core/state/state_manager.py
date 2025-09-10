@@ -682,8 +682,10 @@ class StateManager:
         """
         apis = []
         for file in self.next_state.files:
-            parts = Path(file.path).parts
-            if not ("client" in parts and "src" in parts and "api" in parts):
+            file_path = Path(file.path)
+            try:
+                file_path.relative_to(Path("client") / "src" / "api")
+            except ValueError:
                 continue
 
             session = inspect(file).async_session
@@ -710,6 +712,7 @@ class StateManager:
                             data[key.lower()] = next_line.split(":", 1)[1].strip()
 
                 if not data["endpoint"]:
+                    log.warning("API definition missing endpoint in %s line %d", file.path, i + 1)
                     continue
 
                 backend = (
@@ -749,9 +752,9 @@ class StateManager:
         apis = await self.get_apis()
         for file in files_with_implemented_apis:
             for endpoint_info in file["endpoints"]:
-                endpoint = endpoint_info["endpoint"]
+                endpoint = endpoint_info["endpoint"].rstrip("/")
                 line = endpoint_info["line"]
-                api = next((api for api in apis if endpoint == api["endpoint"]), None)
+                api = next((api for api in apis if endpoint == api["endpoint"].rstrip("/")), None)
                 if api is not None:
                     api["status"] = "implemented"
                     api["locations"]["backend"] = {"path": file["path"], "line": line}
