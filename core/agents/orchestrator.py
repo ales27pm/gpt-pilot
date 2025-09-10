@@ -90,13 +90,22 @@ class Orchestrator(BaseAgent, GitMixin):
                 log.debug(
                     f"Running agents {[a.__class__.__name__ for a in agent]} (step {self.current_state.step_index})"
                 )
-                responses = await asyncio.gather(*tasks)
-                for single_agent, single_response in zip(agent, responses):
+                raw_responses = await asyncio.gather(*tasks, return_exceptions=True)
+                responses = []
+                for single_agent, single_response in zip(agent, raw_responses):
+                    if isinstance(single_response, Exception):
+                        log.exception(
+                            "Agent %s failed during parallel execution",
+                            single_agent.agent_type,
+                            exc_info=single_response,
+                        )
+                        single_response = AgentResponse.error(single_agent, str(single_response))
+                    responses.append(single_response)
                     await self.message_broker.publish(
                         "agent.finish",
                         {
                             "agent": single_agent.agent_type,
-                            "status": single_response.type.value if single_response else "unknown",
+                            "response": single_response,
                         },
                     )
                 response = self.handle_parallel_responses(agent[0], responses)
@@ -131,7 +140,11 @@ class Orchestrator(BaseAgent, GitMixin):
             else:
                 await self.message_broker.publish("agent.start", agent.agent_type)
                 log.debug(f"Running agent {agent.__class__.__name__} (step {self.current_state.step_index})")
-                response = await agent.run()
+                try:
+                    response = await agent.run()
+                except Exception as exc:  # noqa: BLE001
+                    log.exception("Agent %s failed during execution", agent.agent_type, exc_info=exc)
+                    response = AgentResponse.error(agent, str(exc))
                 await self.message_broker.publish("agent.finish", {"agent": agent.agent_type, "response": response})
 
             if response.type == ResponseType.EXIT:
