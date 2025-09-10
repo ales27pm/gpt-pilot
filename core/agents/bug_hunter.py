@@ -13,7 +13,7 @@ from core.db.models.project_state import IterationStatus
 from core.llm.parser import JSONParser
 from core.log import get_logger
 from core.telemetry import telemetry
-from core.ui.base import ProjectStage, pythagora_source, extract_debugging_logs
+from core.ui.base import ProjectStage, extract_debugging_logs, pythagora_source
 
 log = get_logger(__name__)
 
