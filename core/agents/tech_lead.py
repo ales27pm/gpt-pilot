@@ -191,7 +191,6 @@ class TechLead(RelevantFilesMixin, BaseAgent):
                 "plan",
                 epic=epic,
                 task_type=epic.get("source", "app"),
-                # FIXME: we're injecting summaries to initial description
                 existing_summary=None,
                 get_only_api_files=True,
             )
@@ -208,7 +207,7 @@ class TechLead(RelevantFilesMixin, BaseAgent):
 
         if epic.get("source") == "feature" or epic.get("complexity") == Complexity.SIMPLE:
             await self.send_message(f"Epic 1: {epic['name']}")
-            self.next_state.current_epic["sub_epics"] = [
+            epic["sub_epics"] = [
                 {
                     "id": 1,
                     "description": epic["name"],
@@ -227,7 +226,7 @@ class TechLead(RelevantFilesMixin, BaseAgent):
                 for task in response.plan
             ]
         else:
-            self.next_state.current_epic["sub_epics"] = [
+            epic["sub_epics"] = [
                 {
                     "id": sub_epic_number,
                     "description": sub_epic.description,
@@ -258,10 +257,7 @@ class TechLead(RelevantFilesMixin, BaseAgent):
                 ]
                 convo.remove_last_x_messages(2)
 
-        await self.ui.send_epics_and_tasks(
-            self.next_state.current_epic["sub_epics"],
-            self.next_state.tasks,
-        )
+        await self.ui.send_epics_and_tasks(epic["sub_epics"], self.next_state.tasks)
 
         await self.ui.send_project_stage({"stage": ProjectStage.OPEN_PLAN})
         response = await self.ask_question(
