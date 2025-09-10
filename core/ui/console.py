@@ -230,9 +230,7 @@ class PlainConsoleUI(UIBase):
         self._marker("app-link", app_link)
 
     async def open_editor(self, file: str, line: Optional[int] = None):
-        self._marker(
-            "open-editor", f"{file}:{line if line is not None else ''}"
-        )
+        self._marker("open-editor", f"{file}:{line if line is not None else ''}")
 
     async def send_project_root(self, path: str):
         self._marker("project-root", path)
@@ -248,9 +246,7 @@ class PlainConsoleUI(UIBase):
 
     async def send_file_status(self, file_path: str, file_status: str, source: Optional[UISource] = None):
         if source:
-            self._marker(
-                "file-status", f"{file_path}: {file_status} [{source}]"
-            )
+            self._marker("file-status", f"{file_path}: {file_status} [{source}]")
         else:
             self._marker("file-status", f"{file_path}: {file_status}")
 

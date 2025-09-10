@@ -28,9 +28,7 @@ class MessageBroker:
             try:
                 await asyncio.wait_for(queue.put(message), timeout=0.5)
             except asyncio.TimeoutError:
-                self._logger.warning(
-                    "dropping message on topic %s: slow consumer", topic
-                )
+                self._logger.warning("dropping message on topic %s: slow consumer", topic)
 
     def subscribe(self, topic: str) -> asyncio.Queue[Any]:
         """Create and return a new bounded queue for ``topic`` messages."""

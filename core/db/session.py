@@ -31,9 +31,7 @@ class SessionManager:
             echo_pool="debug" if config.debug_sql else None,
             pool_pre_ping=True,
         )
-        self.SessionClass = async_sessionmaker(
-            self.engine, expire_on_commit=False, class_=AsyncSession
-        )
+        self.SessionClass = async_sessionmaker(self.engine, expire_on_commit=False, class_=AsyncSession)
         self.session = None
 
         event.listen(self.engine.sync_engine, "connect", self._on_connect)
