@@ -2,11 +2,13 @@ from enum import Enum
 
 from core.log import get_logger
 
-# from .javascript_react import JavascriptReactProjectTemplate
-# from .node_express_mongoose import NodeExpressMongooseProjectTemplate
+from .django_postgres import DjangoPostgresProjectTemplate
+from .fastapi_sqlite import FastapiSqliteProjectTemplate
+from .flask_sqlite import FlaskSqliteProjectTemplate
+from .node_express_mongoose import NodeExpressMongooseProjectTemplate
+from .react_express import ReactExpressProjectTemplate
+from .typer_cli import TyperCliProjectTemplate
 from .vite_react import ViteReactProjectTemplate
-
-# from .react_express import ReactExpressProjectTemplate
 
 log = get_logger(__name__)
 
@@ -14,15 +16,21 @@ log = get_logger(__name__)
 class ProjectTemplateEnum(str, Enum):
     """Choices of available project templates."""
 
-    # JAVASCRIPT_REACT = JavascriptReactProjectTemplate.name
-    # NODE_EXPRESS_MONGOOSE = NodeExpressMongooseProjectTemplate.name
+    NODE_EXPRESS_MONGOOSE = NodeExpressMongooseProjectTemplate.name
+    REACT_EXPRESS = ReactExpressProjectTemplate.name
     VITE_REACT = ViteReactProjectTemplate.name
-    # REACT_EXPRESS = ReactExpressProjectTemplate.name
+    FLASK_SQLITE = FlaskSqliteProjectTemplate.name
+    FASTAPI_SQLITE = FastapiSqliteProjectTemplate.name
+    DJANGO_POSTGRES = DjangoPostgresProjectTemplate.name
+    TYPER_CLI = TyperCliProjectTemplate.name
 
 
 PROJECT_TEMPLATES = {
-    # JavascriptReactProjectTemplate.name: JavascriptReactProjectTemplate,
-    # NodeExpressMongooseProjectTemplate.name: NodeExpressMongooseProjectTemplate,
+    NodeExpressMongooseProjectTemplate.name: NodeExpressMongooseProjectTemplate,
+    ReactExpressProjectTemplate.name: ReactExpressProjectTemplate,
     ViteReactProjectTemplate.name: ViteReactProjectTemplate,
-    # ReactExpressProjectTemplate.name: ReactExpressProjectTemplate,
+    FlaskSqliteProjectTemplate.name: FlaskSqliteProjectTemplate,
+    FastapiSqliteProjectTemplate.name: FastapiSqliteProjectTemplate,
+    DjangoPostgresProjectTemplate.name: DjangoPostgresProjectTemplate,
+    TyperCliProjectTemplate.name: TyperCliProjectTemplate,
 }

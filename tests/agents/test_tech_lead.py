@@ -1,3 +1,6 @@
+import json
+from unittest.mock import AsyncMock
+
 import pytest
 
 from core.agents.response import ResponseType
@@ -27,7 +30,6 @@ async def test_create_initial_epic(agentcontext):
     assert sm.current_state.epics[1]["completed"] is False
 
 
-@pytest.mark.skip(reason="Template not implemented")
 @pytest.mark.asyncio
 async def test_apply_project_template(agentcontext):
     sm, _, ui, _ = agentcontext
@@ -69,7 +71,6 @@ async def test_ask_for_feature(agentcontext):
     assert sm.current_state.epics[2]["completed"] is False
 
 
-@pytest.mark.skip(reason="Requires complete planner integration")
 @pytest.mark.asyncio
 async def test_plan_epic(agentcontext):
     """
@@ -96,6 +97,21 @@ async def test_plan_epic(agentcontext):
                 Epic(description="Task 2"),
             ]
         )
+    )
+    ui.send_epics_and_tasks = AsyncMock()
+    ui.ask_question.return_value = UserInput(
+        button="done_editing",
+        text=json.dumps(
+            [
+                {
+                    "description": "Initial Project",
+                    "tasks": [
+                        {"description": "Task 1"},
+                        {"description": "Task 2"},
+                    ],
+                }
+            ]
+        ),
     )
     response = await tl.run()
     assert response.type == ResponseType.DONE

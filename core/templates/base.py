@@ -90,6 +90,7 @@ class BaseProjectTemplate:
 
         log.info(f"Applying project template {self.name} with options: {self.options_dict}")
 
+        root_dir = getattr(self.state_manager.file_system, "root", "/tmp")
         files = self.file_renderer.render_tree(
             self.path,
             {
@@ -99,7 +100,7 @@ class BaseProjectTemplate:
                 "random_secret": uuid4().hex,
                 "options": self.options_dict,
             },
-            self.state_manager.file_system.root,
+            root_dir,
             self.filter,
         )
 

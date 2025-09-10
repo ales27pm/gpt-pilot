@@ -6,7 +6,6 @@ from core.state.state_manager import StateManager
 from core.templates.registry import PROJECT_TEMPLATES
 
 
-@pytest.mark.skip(reason="Project templates unavailable")
 @pytest.mark.asyncio
 @patch("core.state.state_manager.get_config")
 async def test_render_react_express_sql(mock_get_config, testmanager):
@@ -31,7 +30,6 @@ async def test_render_react_express_sql(mock_get_config, testmanager):
     assert "api/models/user.js" not in files
 
 
-@pytest.mark.skip(reason="Project templates unavailable")
 @pytest.mark.asyncio
 @patch("core.state.state_manager.get_config")
 async def test_render_react_express_nosql(mock_get_config, testmanager):
@@ -56,7 +54,6 @@ async def test_render_react_express_nosql(mock_get_config, testmanager):
     assert "prisma/schema.prisma" not in files
 
 
-@pytest.mark.skip(reason="Project templates unavailable")
 @pytest.mark.asyncio
 @patch("core.state.state_manager.get_config")
 async def test_render_node_express_mongoose(mock_get_config, testmanager):
@@ -76,4 +73,84 @@ async def test_render_node_express_mongoose(mock_get_config, testmanager):
 
     files = sm.file_system.list()
     for f in ["server.js", "models/User.js"]:
+        assert f in files
+
+
+@pytest.mark.asyncio
+@patch("core.state.state_manager.get_config")
+async def test_render_flask_sqlite(mock_get_config, testmanager):
+    mock_get_config.return_value.fs.type = "memory"
+    sm = StateManager(testmanager)
+    pm = MagicMock(run_command=AsyncMock())
+
+    await sm.create_project("TestProjectName")
+    await sm.commit()
+
+    TemplateClass = PROJECT_TEMPLATES["flask_sqlite"]
+    template = TemplateClass(TemplateClass.options_class(), sm, pm)
+
+    await template.apply()
+
+    files = sm.file_system.list()
+    for f in ["app.py", "models.py", "requirements.txt", "templates/index.html"]:
+        assert f in files
+
+
+@pytest.mark.asyncio
+@patch("core.state.state_manager.get_config")
+async def test_render_fastapi_sqlite(mock_get_config, testmanager):
+    mock_get_config.return_value.fs.type = "memory"
+    sm = StateManager(testmanager)
+    pm = MagicMock(run_command=AsyncMock())
+
+    await sm.create_project("TestProjectName")
+    await sm.commit()
+
+    TemplateClass = PROJECT_TEMPLATES["fastapi_sqlite"]
+    template = TemplateClass(TemplateClass.options_class(), sm, pm)
+
+    await template.apply()
+
+    files = sm.file_system.list()
+    for f in ["main.py", "models.py", "requirements.txt"]:
+        assert f in files
+
+
+@pytest.mark.asyncio
+@patch("core.state.state_manager.get_config")
+async def test_render_django_postgres(mock_get_config, testmanager):
+    mock_get_config.return_value.fs.type = "memory"
+    sm = StateManager(testmanager)
+    pm = MagicMock(run_command=AsyncMock())
+
+    await sm.create_project("TestProjectName")
+    await sm.commit()
+
+    TemplateClass = PROJECT_TEMPLATES["django_postgres"]
+    template = TemplateClass(TemplateClass.options_class(), sm, pm)
+
+    await template.apply()
+
+    files = sm.file_system.list()
+    for f in ["manage.py", "project/settings.py", "app/models.py", "requirements.txt"]:
+        assert f in files
+
+
+@pytest.mark.asyncio
+@patch("core.state.state_manager.get_config")
+async def test_render_typer_cli(mock_get_config, testmanager):
+    mock_get_config.return_value.fs.type = "memory"
+    sm = StateManager(testmanager)
+    pm = MagicMock(run_command=AsyncMock())
+
+    await sm.create_project("TestProjectName")
+    await sm.commit()
+
+    TemplateClass = PROJECT_TEMPLATES["typer_cli"]
+    template = TemplateClass(TemplateClass.options_class(), sm, pm)
+
+    await template.apply()
+
+    files = sm.file_system.list()
+    for f in ["main.py", "requirements.txt"]:
         assert f in files
