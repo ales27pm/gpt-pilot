@@ -1,4 +1,5 @@
 import asyncio
+import subprocess
 import sys
 from os import getenv, makedirs
 from os.path import join
@@ -9,7 +10,12 @@ from psutil import Process
 
 from core.proc.process_manager import LocalProcess, ProcessManager
 
-SLEEP_CMD = f'"{sys.executable}" -c "import time; time.sleep(5)"'
+if sys.platform == "win32":
+    SLEEP_CMD = subprocess.list2cmdline([sys.executable, "-c", "import time; time.sleep(5)"])
+else:
+    import shlex
+
+    SLEEP_CMD = " ".join(shlex.quote(arg) for arg in [sys.executable, "-c", "import time; time.sleep(5)"])
 
 
 @pytest.mark.asyncio
