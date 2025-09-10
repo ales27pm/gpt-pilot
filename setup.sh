@@ -33,6 +33,29 @@ if [ -f requirements.txt ]; then
   python3 -m pip install -r requirements.txt
 fi
 
+# install frontend dependencies if a frontend project exists
+if [ -d frontend ] && [ -f frontend/package.json ]; then
+  if command -v npm >/dev/null 2>&1 && command -v node >/dev/null 2>&1; then
+    NODE_VERSION=$(node -v | sed 's/v//')
+    NODE_MAJOR=${NODE_VERSION%%.*}
+    if [ "$NODE_MAJOR" -lt 18 ]; then
+      echo "Node.js 18+ is required for the frontend (found $NODE_VERSION). Skipping frontend setup."
+    else
+      echo "Installing frontend dependencies..."
+      (
+        cd frontend
+        if [ -f package-lock.json ]; then
+          npm ci
+        else
+          npm install
+        fi
+      )
+    fi
+  else
+    echo "Node.js and npm are not installed; skipping frontend setup."
+  fi
+fi
+
 # configure config.json
 if [ ! -f config.json ]; then
   cp example-config.json config.json
