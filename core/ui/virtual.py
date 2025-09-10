@@ -140,6 +140,9 @@ class VirtualUI(UIBase):
     ) -> None:
         pass
 
+    async def get_debugging_logs(self) -> tuple[str, str]:
+        return "", ""
+
     async def send_modified_files(
         self,
         modified_files: JSONList,

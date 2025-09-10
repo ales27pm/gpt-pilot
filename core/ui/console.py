@@ -193,6 +193,9 @@ class PlainConsoleUI(UIBase):
     ) -> None:
         pass
 
+    async def get_debugging_logs(self) -> tuple[str, str]:
+        return "", ""
+
     async def send_run_command(self, run_command: str):
         pass
 

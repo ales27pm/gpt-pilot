@@ -438,6 +438,18 @@ class IPCClientUI(UIBase):
             content=data_about_logs,
         )
 
+    async def get_debugging_logs(self) -> tuple[str, str]:
+        try:
+            response = await self._receive()
+        except UIClosedError:
+            return "", ""
+        if response.type != MessageType.DEBUGGING_LOGS:
+            return "", ""
+        content = response.content if isinstance(response.content, dict) else {}
+        backend = content.get("backend") or ""
+        frontend = content.get("frontend") or ""
+        return backend, frontend
+
     async def send_run_command(self, run_command: str):
         await self._send(
             MessageType.RUN_COMMAND,

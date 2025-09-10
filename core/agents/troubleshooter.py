@@ -85,7 +85,7 @@ class Troubleshooter(ChatWithBreakdownMixin, IterationPromptMixin, RelevantFiles
         # use "current_iteration" here
         last_iteration = self.current_state.iterations[-1] if len(self.current_state.iterations) >= 3 else None
 
-        should_iterate, is_loop, bug_report, change_description = await self.get_user_feedback(
+        should_iterate, is_loop, bug_report, change_description, backend_logs, frontend_logs = await self.get_user_feedback(
             run_command,
             user_instructions,
             last_iteration is not None,
@@ -112,6 +112,10 @@ class Troubleshooter(ChatWithBreakdownMixin, IterationPromptMixin, RelevantFiles
             # this might be caused if we show the input field instead of buttons
             iteration_status = IterationStatus.NEW_FEATURE_REQUESTED
 
+        bug_hunting_cycles = []
+        if iteration_status == IterationStatus.HUNTING_FOR_BUG and (backend_logs or frontend_logs):
+            bug_hunting_cycles = [{"backend_logs": backend_logs, "frontend_logs": frontend_logs}]
+
         self.next_state.iterations = self.current_state.iterations + [
             {
                 "id": uuid4().hex,
@@ -123,7 +127,7 @@ class Troubleshooter(ChatWithBreakdownMixin, IterationPromptMixin, RelevantFiles
                 # just count the iterations
                 "attempts": 1,
                 "status": iteration_status,
-                "bug_hunting_cycles": [],
+                "bug_hunting_cycles": bug_hunting_cycles,
             }
         ]
 
@@ -227,7 +231,7 @@ class Troubleshooter(ChatWithBreakdownMixin, IterationPromptMixin, RelevantFiles
         run_command: str,
         user_instructions: str,
         last_iteration: Optional[dict],
-    ) -> tuple[bool, bool, str, str]:
+    ) -> tuple[bool, bool, Optional[str], Optional[str], Optional[str], Optional[str]]:
         """
         Ask the user to test the app and provide feedback.
 
@@ -246,6 +250,8 @@ class Troubleshooter(ChatWithBreakdownMixin, IterationPromptMixin, RelevantFiles
         bug_report = None
         change_description = None
         hint = None
+        backend_logs = None
+        frontend_logs = None
 
         is_loop = False
         should_iterate = True
@@ -303,10 +309,11 @@ class Troubleshooter(ChatWithBreakdownMixin, IterationPromptMixin, RelevantFiles
                 if user_description.button == "back":
                     continue
                 bug_report = user_description.text
+                backend_logs, frontend_logs = await self.ui.get_debugging_logs()
                 await self.get_relevant_files(user_feedback=bug_report)
                 break
 
-        return should_iterate, is_loop, bug_report, change_description
+        return should_iterate, is_loop, bug_report, change_description, backend_logs, frontend_logs
 
     def try_next_alternative_solution(self, user_feedback: str, user_feedback_qa: list[str]) -> AgentResponse:
         """

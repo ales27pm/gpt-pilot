@@ -102,7 +102,9 @@ class Architect(BaseAgent):
         if spec.example_project:
             self.prepare_example_project(spec)
         else:
-            await self.plan_architecture(spec)
+            response = await self.plan_architecture(spec)
+            if isinstance(response, AgentResponse):
+                return response
 
         await self.check_system_dependencies(spec)
 
@@ -160,7 +162,7 @@ class Architect(BaseAgent):
 
         return tpl.architecture, templates
 
-    async def plan_architecture(self, spec: Specification):
+    async def plan_architecture(self, spec: Specification) -> Optional[AgentResponse]:
         await self.send_message("Planning project architecture ...")
         architecture_description, templates = await self.select_templates(spec)
 
@@ -178,7 +180,9 @@ class Architect(BaseAgent):
         )
         arch: Architecture = await llm(convo, parser=JSONParser(Architecture))
 
-        await self.check_compatibility(arch)
+        response = await self.check_compatibility(arch)
+        if isinstance(response, AgentResponse):
+            return response
 
         spec.architecture = architecture_description
         spec.templates = {t.name: t.options_dict for t in templates.values()}
@@ -186,33 +190,39 @@ class Architect(BaseAgent):
         spec.package_dependencies = [d.model_dump() for d in arch.package_dependencies]
         telemetry.set("architecture", json.loads(arch.model_dump_json()))
 
-    async def check_compatibility(self, arch: Architecture) -> bool:
+        return None
+    async def check_compatibility(self, arch: Architecture) -> Optional[AgentResponse]:
         warn_system_deps = [dep.name for dep in arch.system_dependencies if dep.name.lower() in WARN_SYSTEM_DEPS]
         warn_package_deps = [dep.name for dep in arch.package_dependencies if dep.name.lower() in WARN_FRAMEWORKS]
 
         if warn_system_deps:
-            await self.ask_question(
+            answer = await self.ask_question(
                 f"Warning: Pythagora doesn't officially support {', '.join(warn_system_deps)}. "
                 f"You can try to use {'it' if len(warn_system_deps) == 1 else 'them'}, but you may run into problems.",
-                buttons={"continue": "Continue"},
+                buttons={"continue": "Continue", "cancel": "Cancel"},
                 buttons_only=True,
                 default="continue",
             )
+            if answer.button == "cancel":
+                return AgentResponse.update_specification(
+                    self, description="User cancelled; please reword specification."
+                )
 
         if warn_package_deps:
-            await self.ask_question(
+            answer = await self.ask_question(
                 f"Warning: Pythagora works best with vanilla JavaScript. "
                 f"You can try try to use {', '.join(warn_package_deps)}, but you may run into problems. "
                 f"Visit {WARN_FRAMEWORKS_URL} for more information.",
-                buttons={"continue": "Continue"},
+                buttons={"continue": "Continue", "cancel": "Cancel"},
                 buttons_only=True,
                 default="continue",
             )
+            if answer.button == "cancel":
+                return AgentResponse.update_specification(
+                    self, description="User cancelled; please reword specification."
+                )
 
-        # TODO: add "cancel" option to the above buttons; if pressed, Architect should
-        # return AgentResponse.revise_spec()
-        # that SpecWriter should catch and allow the user to reword the initial spec.
-        return True
+        return None
 
     def prepare_example_project(self, spec: Specification):
         log.debug(f"Setting architecture for example project: {spec.example_project}")

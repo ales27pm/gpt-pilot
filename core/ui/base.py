@@ -276,6 +276,10 @@ class UIBase:
         """
         raise NotImplementedError()
 
+    async def get_debugging_logs(self) -> tuple[str, str]:
+        """Retrieve backend and frontend logs captured during testing."""
+        return "", ""
+
     async def send_run_command(self, run_command: str):
         """
         Send a run command to the UI.
