@@ -74,13 +74,14 @@ async def test_local_process_wait_handles_unresponsive_process(tmp_path):
 
     lp._process.wait = AsyncMock(side_effect=never_exit)
 
-    with patch.object(LocalProcess, "terminate", AsyncMock()) as term:
+    with patch.object(LocalProcess, "terminate", AsyncMock(wraps=lp.terminate)) as term:
         ret = await lp.wait(0.1)
         assert ret == -1
         term.assert_awaited()
 
-    lp._process.kill()
-    await orig_wait()
+    # ensure underlying wait coroutine restored and awaited for cleanup
+    lp._process.wait = orig_wait
+    await lp._process.wait()
 
 
 @pytest.mark.asyncio
