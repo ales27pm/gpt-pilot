@@ -88,7 +88,9 @@ class BaseProjectTemplate:
         project_folder = state.branch.project.folder_name
         project_description = state.specification.description
 
-        log.info(f"Applying project template {self.name} with options: {self.options_dict}")
+        log.info(
+            f"Applying project template {self.name} with options: {self.options_dict()}"
+        )
 
         root_dir = getattr(self.state_manager.file_system, "root", "/tmp")
         files = self.file_renderer.render_tree(
@@ -98,7 +100,7 @@ class BaseProjectTemplate:
                 "project_folder": project_folder,
                 "project_description": project_description,
                 "random_secret": uuid4().hex,
-                "options": self.options_dict,
+                "options": self.options_dict(),
             },
             root_dir,
             self.filter,
@@ -136,7 +138,6 @@ class BaseProjectTemplate:
         """
         raise NotImplementedError()
 
-    @property
     def options_dict(self) -> dict[str, Any]:
         """Template options as a Python dictionary."""
         return loads(self.options.model_dump_json())

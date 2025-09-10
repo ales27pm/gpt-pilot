@@ -72,11 +72,11 @@ class Architecture(BaseModel):
         description="Type of the app to build.",
     )
     system_dependencies: list[SystemDependency] = Field(
-        None,
+        default_factory=list,
         description="List of system dependencies required to build and run the app.",
     )
     package_dependencies: list[PackageDependency] = Field(
-        None,
+        default_factory=list,
         description="List of framework/language-specific packages used by the app.",
     )
 
@@ -185,15 +185,29 @@ class Architect(BaseAgent):
             return response
 
         spec.architecture = architecture_description
-        spec.templates = {t.name: t.options_dict for t in templates.values()}
-        spec.system_dependencies = [d.model_dump() for d in arch.system_dependencies]
-        spec.package_dependencies = [d.model_dump() for d in arch.package_dependencies]
+        spec.templates = {t.name: t.options_dict() for t in templates.values()}
+        spec.system_dependencies = [
+            d.model_dump() for d in arch.system_dependencies or [] if d
+        ]
+        spec.package_dependencies = [
+            d.model_dump() for d in arch.package_dependencies or [] if d
+        ]
         telemetry.set("architecture", json.loads(arch.model_dump_json()))
 
         return None
     async def check_compatibility(self, arch: Architecture) -> Optional[AgentResponse]:
-        warn_system_deps = [dep.name for dep in arch.system_dependencies if dep.name.lower() in WARN_SYSTEM_DEPS]
-        warn_package_deps = [dep.name for dep in arch.package_dependencies if dep.name.lower() in WARN_FRAMEWORKS]
+        warn_system_deps = [
+            dep.name
+            for dep in arch.system_dependencies or []
+            if getattr(dep, "name", None)
+            and dep.name.lower() in WARN_SYSTEM_DEPS
+        ]
+        warn_package_deps = [
+            dep.name
+            for dep in arch.package_dependencies or []
+            if getattr(dep, "name", None)
+            and dep.name.lower() in WARN_FRAMEWORKS
+        ]
 
         if warn_system_deps:
             response = await self._confirm_continue(
