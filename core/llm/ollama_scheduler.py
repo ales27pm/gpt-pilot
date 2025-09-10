@@ -33,6 +33,22 @@ class OllamaScheduler:
     """
 
     def __init__(self, total_cpu_threads: int, total_gpu_mem: int) -> None:
+        """
+        Initialize an OllamaScheduler with the given CPU thread and GPU memory resources.
+        
+        Parameters:
+            total_cpu_threads (int): Total number of CPU threads available for preprocessing.
+            total_gpu_mem (int): Total GPU memory (in MB) available for concurrent inference jobs.
+        
+        Initializes scheduler state:
+            - cpu_free, gpu_mem_free: current available CPU threads and GPU memory.
+            - _cpu_queue: priority queue for CPU preprocessing jobs.
+            - _gpu_queue: heap-based priority queue for jobs ready for GPU inference.
+            - _gpu_running: list of currently running GPU jobs.
+            - max_gpu_concurrency: peak number of concurrent GPU jobs observed.
+            - completed: list of completed jobs.
+            - _lock: asyncio.Lock protecting scheduler state.
+        """
         self.total_cpu_threads = total_cpu_threads
         self.total_gpu_mem = total_gpu_mem
         self.cpu_free = total_cpu_threads
@@ -45,7 +61,18 @@ class OllamaScheduler:
         self._lock = asyncio.Lock()
 
     async def submit(self, job: OllamaJob) -> str:
-        """Submit a job and wait for its completion."""
+        """
+        Submit an OllamaJob for processing and wait for its completion.
+        
+        The job is enqueued for CPU preprocessing, then scheduled for GPU work when resources permit.
+        A Future is created on the job (job._future) and will be completed with the final prompt string when the job finishes.
+        
+        Parameters:
+            job (OllamaJob): The job to submit. Its internal Future (job._future) will be created by this method and resolved with the job's resulting prompt.
+        
+        Returns:
+            str: The final prompt/result produced for the job (the value set on job._future) after GPU processing completes.
+        """
 
         job._future = asyncio.get_event_loop().create_future()
         await self._cpu_queue.put(job)
@@ -54,7 +81,15 @@ class OllamaScheduler:
         return await job._future
 
     async def _schedule(self) -> None:
-        """Run scheduling loops for CPU and GPU queues."""
+        """
+        Run the scheduler loop that allocates available CPU threads and GPU memory to queued jobs.
+        
+        This method repeatedly attempts to make progress until no more jobs can be started:
+        - CPU phase: dequeues highest-priority jobs from self._cpu_queue and, if enough cpu_free is available, deducts cpu threads and starts preprocessing in a background task. If a job requires more CPU than currently free it is re-queued and CPU scheduling for this cycle stops.
+        - GPU phase: pops jobs from the heap-based self._gpu_queue whose gpu_mem_mb fits into gpu_mem_free, deducts GPU memory, and starts GPU execution in a background task.
+        
+        The loop ends when neither phase can start any additional jobs. The method does not wait for the background tasks to finish; those tasks are responsible for releasing resources and re-invoking scheduling.
+        """
 
         made_progress = True
         while made_progress:
@@ -79,6 +114,15 @@ class OllamaScheduler:
                 made_progress = True
 
     async def _run_preprocess(self, job: OllamaJob) -> None:
+        """
+        Release CPU resources for a completed preprocessing job and move it to the GPU queue.
+        
+        This coroutine represents the completion of a job's CPU-bound preprocessing step. It frees the CPU threads previously allocated to the job, pushes the job onto the scheduler's GPU priority queue, and triggers the scheduler to reconsider work distribution.
+        
+        Parameters:
+            job (OllamaJob): The job whose preprocessing has finished; will be enqueued for GPU inference.
+        
+        """
         try:
             await asyncio.sleep(0)  # Simulate CPU bound work
         finally:
@@ -87,6 +131,14 @@ class OllamaScheduler:
                 heapq.heappush(self._gpu_queue, job)
                 await self._schedule()
     async def _run_gpu(self, job: OllamaJob) -> None:
+        """
+        Run the GPU/inference phase for a job and finalize it.
+        
+        Performs the GPU-bound portion of a job: marks the job as running (updating internal concurrency tracking), awaits the GPU work (simulated), then on completion releases GPU memory, removes the job from the running set, records it as completed, and sets the job's future result to the job's prompt. Finally it reacquires the scheduler lock and triggers another scheduling pass.
+        
+        Parameters:
+            job (OllamaJob): The job whose GPU phase should be executed. This function sets job._future with the final result and mutates scheduler state (gpu_mem_free, _gpu_running, completed, max_gpu_concurrency).
+        """
         self._gpu_running.append(job)
         self.max_gpu_concurrency = max(self.max_gpu_concurrency, len(self._gpu_running))
         try:

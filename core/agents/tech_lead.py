@@ -50,6 +50,19 @@ class TechLead(RelevantFilesMixin, BaseAgent):
     display_name = "Tech Lead"
 
     async def run(self) -> AgentResponse:
+        """
+        Run the Tech Lead agent's main decision loop to advance project state and return the next AgentResponse.
+        
+        This coroutine inspects the current agent state and performs one of several top-level actions, then returns an AgentResponse indicating completion or the next step:
+        - If there are no epics, creates the initial project epic and exits early.
+        - If there is exactly one epic and it is marked completed, creates the initial project epic and exits early.
+        - If project templates are present in the specification and no files exist yet, applies project templates, records the action, and exits early.
+        - If any incomplete epics exist, selects the current epic (or the first incomplete one), sets the next action to "Create a development plan", and delegates to plan_epic(epic).
+        - If all epics are completed, prompts the user to add a new feature via ask_for_new_feature().
+        
+        Returns:
+            AgentResponse: The agent's response after performing the chosen action (may be a done response or the result of delegating to planning/feature prompt coroutines).
+        """
         state = self.current_state
 
         # If there are no epics yet, create the initial project epic
