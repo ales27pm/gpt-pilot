@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional
 
 from core.log import get_logger
@@ -97,7 +99,7 @@ class VirtualUI(UIBase):
             else:
                 return UserInput(text=default)
         elif buttons_only:
-            return UserInput(button=list(buttons.keys)[0])
+            return UserInput(button=list(buttons.keys())[0])
         else:
             return UserInput(text="")
 
