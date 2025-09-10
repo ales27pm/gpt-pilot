@@ -4,6 +4,8 @@ import asyncio
 from collections import defaultdict
 from typing import Any, DefaultDict
 
+from core.log import get_logger
+
 
 class MessageBroker:
     """A simple asynchronous message broker.
@@ -18,14 +20,18 @@ class MessageBroker:
     def __init__(self, maxsize: int = 1000) -> None:
         self._maxsize = maxsize
         self._queues: DefaultDict[str, list[asyncio.Queue[Any]]] = defaultdict(list)
+        self._logger = get_logger(__name__)
 
     async def publish(self, topic: str, message: Any) -> None:
         """Publish ``message`` to all subscribers of ``topic``."""
         for queue in self._queues[topic]:
-            await queue.put(message)
+            try:
+                await asyncio.wait_for(queue.put(message), timeout=0.5)
+            except asyncio.TimeoutError:
+                self._logger.warning("dropping message on topic %s: slow consumer", topic)
 
     def subscribe(self, topic: str) -> asyncio.Queue[Any]:
-        """Create and return a new queue for consuming messages from ``topic``."""
+        """Create and return a new bounded queue for ``topic`` messages."""
         queue: asyncio.Queue[Any] = asyncio.Queue(maxsize=self._maxsize)
         self._queues[topic].append(queue)
         return queue
