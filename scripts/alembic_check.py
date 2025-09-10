@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Pre-commit hook to run Alembic check, skipping if database unavailable."""
+
 from alembic import command
 from alembic.config import Config
 from sqlalchemy.exc import OperationalError
