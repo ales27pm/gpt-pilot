@@ -1,3 +1,4 @@
+import copy
 import json
 from enum import Enum
 
@@ -130,7 +131,7 @@ class BugHunter(ChatWithBreakdownMixin, BaseAgent):
         """Ensure bug_hunting_cycles list exists on next_state and has a slot."""
         cycles = self.next_state.current_iteration.get("bug_hunting_cycles")
         if cycles is None:
-            cycles = list(self.current_state.current_iteration.get("bug_hunting_cycles") or [])
+            cycles = copy.deepcopy(self.current_state.current_iteration.get("bug_hunting_cycles") or [])
             self.next_state.current_iteration["bug_hunting_cycles"] = cycles
             self.next_state.flag_iterations_as_modified()
         if not cycles:
