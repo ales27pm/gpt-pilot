@@ -1,5 +1,4 @@
 import asyncio
-import subprocess
 import sys
 from os import getenv, makedirs
 from os.path import join
@@ -11,7 +10,9 @@ from psutil import Process
 from core.proc.process_manager import LocalProcess, ProcessManager
 
 if sys.platform == "win32":
-    SLEEP_CMD = subprocess.list2cmdline([sys.executable, "-c", "import time; time.sleep(5)"])
+    # Build command manually to avoid cmd.exe quoting issues that can cause the
+    # process to exit immediately before tests can inspect it.
+    SLEEP_CMD = f'"{sys.executable}" -c "import time; time.sleep(5)"'
 else:
     import shlex
 
