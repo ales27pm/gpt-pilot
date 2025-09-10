@@ -45,7 +45,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        render_as_batch="sqlite://" in url,
+        render_as_batch=False,
     )
 
     with context.begin_transaction():
@@ -59,7 +59,6 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
@@ -70,7 +69,7 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            render_as_batch="sqlite://" in url,
+            render_as_batch=False,
         )
 
         with context.begin_transaction():

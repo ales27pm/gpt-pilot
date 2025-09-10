@@ -21,8 +21,6 @@ def _async_to_sync_db_scheme(url: str) -> str:
     """
     if url.startswith("postgresql+asyncpg://"):
         return url.replace("postgresql+asyncpg://", "postgresql://")
-    elif url.startswith("sqlite+aiosqlite://"):
-        return url.replace("sqlite+aiosqlite://", "sqlite://")
     return url
 
 

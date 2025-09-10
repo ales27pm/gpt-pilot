@@ -87,7 +87,6 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id", name=op.f("pk_project_states")),
         sa.UniqueConstraint("branch_id", "step_index", name=op.f("uq_project_states_branch_id")),
         sa.UniqueConstraint("prev_state_id", name=op.f("uq_project_states_prev_state_id")),
-        sqlite_autoincrement=True,
     )
     op.create_table(
         "exec_logs",

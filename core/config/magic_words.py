@@ -50,7 +50,6 @@ dist-ssr
 *.sln
 *.sw?
 
-# SQLite databases, data files
 *.db
 *.csv
 

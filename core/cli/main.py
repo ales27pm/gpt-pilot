@@ -8,7 +8,6 @@ from core.agents.orchestrator import Orchestrator
 from core.cli.helpers import delete_project, init, list_projects, list_projects_json, load_project, show_config
 from core.config import LLMProvider, get_config
 from core.db.session import SessionManager
-from core.db.v0importer import LegacyDatabaseImporter
 from core.llm.anthropic_client import CustomAssertionError
 from core.llm.base import APIError, BaseLLMClient
 from core.log import get_logger
@@ -254,10 +253,6 @@ async def async_main(
         return True
     if args.show_config:
         show_config()
-        return True
-    elif args.import_v0:
-        importer = LegacyDatabaseImporter(db, args.import_v0)
-        await importer.import_database()
         return True
     elif args.delete:
         success = await delete_project(db, args.delete)

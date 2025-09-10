@@ -13,7 +13,7 @@ as a standalone command‑line tool.
   change.
 - Supports multiple LLM providers (OpenAI, Anthropic, Groq, Azure and
   compatible APIs).
-- State stored in SQLite by default with optional PostgreSQL support.
+- State stored in PostgreSQL with pgvector extension for semantic context retrieval.
 - Optional web frontend started alongside the backend.
 
 ## How it works

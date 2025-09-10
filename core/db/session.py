@@ -13,7 +13,7 @@ class SessionManager:
 
     Usage:
 
-    >>> config = DBConfig(url="sqlite+aiosqlite:///test.db")
+    >>> config = DBConfig(url="postgresql+asyncpg://postgres:postgres@localhost:5432/test")
     >>> async with DBSession(config) as session:
     ...     # Do something with the session
     """
@@ -38,12 +38,11 @@ class SessionManager:
         """Connection event handler"""
         log.debug(f"Connected to database {self.config.url}")
 
-        if self.config.url.startswith("sqlite"):
-            # Note that SQLite uses NullPool by default, meaning every session creates a
-            # database "connection". This is fine and preferred for SQLite because
-            # it's a local file. PostgreSQL or other database use a real connection pool
-            # by default.
-            dbapi_connection.execute("pragma foreign_keys=on")
+        if self.config.url.startswith("postgresql"):
+            try:
+                dbapi_connection.execute("CREATE EXTENSION IF NOT EXISTS vector")
+            except Exception:
+                log.debug("pgvector extension already installed or cannot be installed")
 
     async def start(self) -> AsyncSession:
         if self.session is not None:

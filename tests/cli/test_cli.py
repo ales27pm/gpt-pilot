@@ -24,7 +24,7 @@ from core.config import Config, LLMProvider, loader
 def write_test_config(tmp_path):
     cfg = {
         "fs": {"workspace_root": str(tmp_path)},
-        "db": {"url": f"sqlite+aiosqlite:///{tmp_path.as_posix()}/test.db"},
+        "db": {"url": "postgresql+asyncpg://postgres:postgres@localhost:5432/test"},
     }
     config_file = tmp_path / "config.json"
     config_file.write_text(json.dumps(cfg), encoding="utf-8")
@@ -54,7 +54,6 @@ def test_parse_arguments(mock_ArgumentParser):
         "--step",
         "--llm-endpoint",
         "--llm-key",
-        "--import-v0",
         "--email",
         "--extension-version",
         "--no-check",
@@ -129,7 +128,7 @@ def test_load_config_defaults(tmp_path):
     config = load_config(MagicMock(config=config_file, level=None, database=None, local_ipc_port=None))
 
     assert config.log.level == "DEBUG"
-    assert config.db.url == "postgresql+asyncpg://postgres:postgres@localhost:5432/gptpilot"
+    assert config.db.url == "postgresql+asyncpg://postgres:postgres@localhost:5432/pythagora"
     assert config.ui.type == "plain"
 
 
@@ -158,7 +157,6 @@ def test_load_config_overridden(tmp_path):
 
 def test_show_default_config(capsys, monkeypatch):
     monkeypatch.setitem(sys.modules, "asyncpg", MagicMock())
-    monkeypatch.setitem(sys.modules, "psycopg2", MagicMock())
     loader.config = Config()
     show_config()
     captured = capsys.readouterr()
@@ -276,7 +274,11 @@ def test_init(tmp_path):
         def parse_args(self):
             return super().parse_args(["--config", str(config_file)])
 
-    with patch("core.cli.helpers.ArgumentParser", new=MockArgumentParser):
+    with (
+        patch("core.cli.helpers.ArgumentParser", new=MockArgumentParser),
+        patch("core.cli.helpers.run_migrations"),
+        patch("core.cli.helpers.SessionManager", return_value=MagicMock()),
+    ):
         ui, db, args = init()
 
     assert ui is not None
@@ -306,15 +308,37 @@ async def test_main(mock_Orchestrator, mock_llm_check, args, run_orchestrator, r
         def parse_args(self):
             return super().parse_args(["--config", str(config_file)] + args)
 
-    with patch("core.cli.helpers.ArgumentParser", new=MockArgumentParser):
+    with (
+        patch("core.cli.helpers.ArgumentParser", new=MockArgumentParser),
+        patch("core.cli.helpers.run_migrations"),
+        patch("core.cli.helpers.SessionManager", return_value=MagicMock()),
+    ):
         ui, db, args = init()
 
-    ui.ask_question = AsyncMock(return_value=MagicMock(text="test", cancelled=False))
+    ui.ask_question = AsyncMock(
+        side_effect=[
+            MagicMock(button="node", cancelled=False),
+            MagicMock(text="test", cancelled=False),
+        ]
+    )
+    ui.start = AsyncMock(return_value=True)
 
     mock_orca = mock_Orchestrator.return_value
     mock_orca.run = AsyncMock(return_value=True)
 
-    success = await async_main(ui, db, args)
+    with (
+        patch("core.cli.main.StateManager") as mock_StateManager,
+        patch("core.cli.main.list_projects", new=AsyncMock()),
+        patch("core.cli.main.list_projects_json", new=AsyncMock()),
+        patch("core.cli.main.load_project", new=AsyncMock(return_value=False)),
+    ):
+        sm = mock_StateManager.return_value
+        sm.project = MagicMock(id="pid")
+        sm.current_state = MagicMock(specification=MagicMock(description="desc"))
+        sm.create_project = AsyncMock(return_value=MagicMock())
+
+        success = await async_main(ui, db, args)
+
     assert success is retval
 
     if run_orchestrator:
@@ -334,16 +358,33 @@ async def test_main_handles_crash(mock_Orchestrator, mock_llm_check, tmp_path):
         def parse_args(self):
             return super().parse_args(["--config", str(config_file)])
 
-    with patch("core.cli.helpers.ArgumentParser", new=MockArgumentParser):
+    with (
+        patch("core.cli.helpers.ArgumentParser", new=MockArgumentParser),
+        patch("core.cli.helpers.run_migrations"),
+        patch("core.cli.helpers.SessionManager", return_value=MagicMock()),
+    ):
         ui, db, args = init()
 
-    ui.ask_question = AsyncMock(return_value=MagicMock(text="test", cancelled=False))
+    ui.ask_question = AsyncMock(
+        side_effect=[
+            MagicMock(button="node", cancelled=False),
+            MagicMock(text="test", cancelled=False),
+        ]
+    )
+    ui.start = AsyncMock(return_value=True)
     ui.send_message = AsyncMock()
 
     mock_orca = mock_Orchestrator.return_value
     mock_orca.run = AsyncMock(side_effect=RuntimeError("test error"))
 
-    success = await async_main(ui, db, args)
+    with patch("core.cli.main.StateManager") as mock_StateManager:
+        sm = mock_StateManager.return_value
+        sm.project = MagicMock(id="pid")
+        sm.current_state = MagicMock(specification=MagicMock(description="desc"))
+        sm.create_project = AsyncMock(return_value=MagicMock())
+        sm.rollback = AsyncMock()
+
+        success = await async_main(ui, db, args)
 
     assert success is False
     ui.send_message.assert_called_once()

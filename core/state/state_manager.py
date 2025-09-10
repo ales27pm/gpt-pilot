@@ -263,10 +263,9 @@ class StateManager:
             await self.commit_with_retry()
             log.debug("Session committed successfully")
 
-            # Having a shorter-lived sessions is considered a good practice in SQLAlchemy,
-            # so we close and recreate the session for each state. This uses db
-            # connection from a connection pool, so it is fast. Note that SQLite uses
-            # no connection pool by default because it's all in-process so it's fast anyway.
+            # Having shorter-lived sessions is considered a good practice in SQLAlchemy,
+            # so we close and recreate the session for each state. This uses a
+            # connection from a connection pool, so it is fast.
             self.current_session.expunge_all()
             await self.session_manager.close()
             self.current_session = await self.session_manager.start()
