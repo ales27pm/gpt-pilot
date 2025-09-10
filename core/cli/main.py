@@ -257,8 +257,6 @@ async def async_main(
     :param args: Command-line arguments.
     :return: True if the application ran successfully, False otherwise.
     """
-    global telemetry_sent
-
     if args.list:
         await list_projects(db)
         return True
