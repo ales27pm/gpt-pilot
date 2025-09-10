@@ -2,7 +2,7 @@ import json
 from enum import Enum
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictStr
 
 from core.agents.base import BaseAgent
 from core.agents.convo import AgentConvo
@@ -34,39 +34,43 @@ class AppType(str, Enum):
     CLI = "cli-tool"
 
 
-# FIXME: all the reponse pydantic models should be strict (see config._StrictModel), also check if we
-# can disallow adding custom Python attributes to the model
 class SystemDependency(BaseModel):
-    name: str = Field(
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    name: StrictStr | None = Field(
         None,
         description="Name of the system dependency, for example Node.js or Python.",
     )
-    description: str = Field(
+    description: StrictStr | None = Field(
         None,
         description="One-line description of the dependency.",
     )
-    test: str = Field(
+    test: StrictStr | None = Field(
         None,
         description="Command line to test whether the dependency is available on the system.",
     )
-    required_locally: bool = Field(
+    required_locally: StrictBool | None = Field(
         None,
         description="Whether this dependency must be installed locally (as opposed to connecting to cloud or other server)",
     )
 
 
 class PackageDependency(BaseModel):
-    name: str = Field(
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    name: StrictStr | None = Field(
         None,
         description="Name of the package dependency, for example Express or React.",
     )
-    description: str = Field(
+    description: StrictStr | None = Field(
         None,
         description="One-line description of the dependency.",
     )
 
 
 class Architecture(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     app_type: AppType = Field(
         AppType.WEB,
         description="Type of the app to build.",
@@ -82,7 +86,9 @@ class Architecture(BaseModel):
 
 
 class TemplateSelection(BaseModel):
-    architecture: str = Field(
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    architecture: StrictStr | None = Field(
         None,
         description="General description of the app architecture.",
     )

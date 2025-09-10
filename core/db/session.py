@@ -26,11 +26,15 @@ class SessionManager:
         """
         self.config = config
         self.engine = create_async_engine(
-            self.config.url, echo=config.debug_sql, echo_pool="debug" if config.debug_sql else None
+            self.config.url,
+            echo=config.debug_sql,
+            echo_pool="debug" if config.debug_sql else None,
+            pool_pre_ping=True,
         )
-        self.SessionClass = async_sessionmaker(self.engine, expire_on_commit=False)
+        self.SessionClass = async_sessionmaker(
+            self.engine, expire_on_commit=False, class_=AsyncSession
+        )
         self.session = None
-        self.recursion_depth = 0
 
         event.listen(self.engine.sync_engine, "connect", self._on_connect)
 
@@ -46,9 +50,7 @@ class SessionManager:
 
     async def start(self) -> AsyncSession:
         if self.session is not None:
-            self.recursion_depth += 1
-            log.warning(f"Re-entering database session (depth: {self.recursion_depth}), potential bug", stack_info=True)
-            return self.session
+            raise RuntimeError("Session already started; create a new SessionManager per task")
 
         self.session = self.SessionClass()
         return self.session
@@ -56,9 +58,6 @@ class SessionManager:
     async def close(self):
         if self.session is None:
             log.warning("Closing database session that was never opened", stack_info=True)
-            return
-        if self.recursion_depth > 0:
-            self.recursion_depth -= 1
             return
 
         await self.session.close()
