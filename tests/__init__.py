@@ -1,1 +1,1 @@
-"""Test package marker."""
+"""Test package marker for gpt-pilot."""
