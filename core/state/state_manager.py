@@ -1,8 +1,8 @@
 import asyncio
 import os.path
 import traceback
-from pathlib import Path
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID, uuid4
 
@@ -682,7 +682,10 @@ class StateManager:
         """
         apis = []
         for file in self.next_state.files:
-            if "client/src/api" not in file.path:
+            file_path = Path(file.path)
+            try:
+                file_path.relative_to(Path("client") / "src" / "api")
+            except ValueError:
                 continue
 
             session = inspect(file).async_session
@@ -699,7 +702,7 @@ class StateManager:
                 description = line.split(":", 1)[1].strip()
                 data = {"endpoint": "", "request": "", "response": ""}
                 # Scan subsequent lines for metadata in any order
-                for next_line in lines[i+1:]:
+                for next_line in lines[i + 1 :]:
                     next_line = next_line.strip()
                     if next_line.startswith("// Description:"):
                         break  # Stop if a new description starts
@@ -707,14 +710,10 @@ class StateManager:
                         prefix = f"// {key}:"
                         if next_line.startswith(prefix):
                             data[key.lower()] = next_line.split(":", 1)[1].strip()
-                for next_line in lines[i + 1 :]:
-                    next_line = next_line.strip()
-                    if next_line.startswith("// Description:"):
-                        break
-                    for key in ["Endpoint", "Request", "Response"]:
-                        prefix = f"// {key}:"
-                        if next_line.startswith(prefix):
-                            data[key.lower()] = next_line.split(":", 1)[1].strip()
+
+                if not data["endpoint"]:
+                    log.warning("API definition missing endpoint in %s line %d", file.path, i + 1)
+                    continue
 
                 backend = (
                     next(
@@ -735,7 +734,7 @@ class StateManager:
                         "request": data["request"],
                         "response": data["response"],
                         "locations": {
-                            "frontend": {"path": file.path, "line": i - 1},
+                            "frontend": {"path": file.path, "line": i + 1},
                             "backend": backend,
                         },
                         "status": "implemented" if backend is not None else "mocked",
@@ -743,17 +742,19 @@ class StateManager:
                 )
         return apis
 
-    async def update_apis(self, files_with_implemented_apis: list[dict] = []):
+    async def update_apis(self, files_with_implemented_apis: Optional[list[dict]] = None):
         """
         Update the list of APIs.
 
         """
+        if files_with_implemented_apis is None:
+            files_with_implemented_apis = []
         apis = await self.get_apis()
         for file in files_with_implemented_apis:
             for endpoint_info in file["endpoints"]:
-                endpoint = endpoint_info["endpoint"]
+                endpoint = endpoint_info["endpoint"].rstrip("/")
                 line = endpoint_info["line"]
-                api = next((api for api in apis if (endpoint in api["endpoint"])), None)
+                api = next((api for api in apis if endpoint == api["endpoint"].rstrip("/")), None)
                 if api is not None:
                     api["status"] = "implemented"
                     api["locations"]["backend"] = {"path": file["path"], "line": line}
