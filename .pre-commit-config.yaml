@@ -16,7 +16,7 @@ repos:
         name: alembic
         stages: [commit]
         types: [python]
-        entry: alembic -c core/db/alembic.ini check
+        entry: python scripts/alembic_check.py
         language: system
         pass_filenames: false
   - repo: local

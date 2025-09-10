@@ -743,7 +743,7 @@ import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./test.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/test")
 
 engine = create_async_engine(DATABASE_URL, echo=True)
 AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
@@ -1487,5 +1487,6 @@ openai==0.27.4
 httpx==0.24.0
 pydantic==1.10.7
 SQLAlchemy==2.0.15
-aiosqlite==0.17.0
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
 websockets==10.3

@@ -92,7 +92,6 @@ def parse_arguments() -> Namespace:
         --step: Load a specific step in a project/branch
         --llm-endpoint: Use specific API endpoint for the given provider
         --llm-key: Use specific LLM key for the given provider
-        --import-v0: Import data from a v0 (gpt-pilot) database with the given path
         --email: User's email address, if provided
         --extension-version: Version of the VSCode extension, if used
         --no-check: Disable initial LLM API check
@@ -127,11 +126,6 @@ def parse_arguments() -> Namespace:
         help="Use specific LLM key for the given provider",
         type=parse_llm_key,
         action="append",
-        required=False,
-    )
-    parser.add_argument(
-        "--import-v0",
-        help="Import data from a v0 (gpt-pilot) database with the given path",
         required=False,
     )
     parser.add_argument("--email", help="User's email address", required=False)

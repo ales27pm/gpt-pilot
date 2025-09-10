@@ -227,12 +227,11 @@ class DBConfig(_StrictModel):
 
     Supported URL schemes:
 
-    * postgresql+asyncpg: PostgreSQL database with optional pgvector extension
-    * sqlite+aiosqlite: SQLite database using the aiosqlite driver
+    * postgresql+asyncpg: PostgreSQL database with pgvector extension
     """
 
     url: str = Field(
-        "postgresql+asyncpg://postgres:postgres@localhost:5432/gptpilot",
+        "postgresql+asyncpg://postgres:postgres@localhost:5432/pythagora",
         description="Database connection URL",
     )
     debug_sql: bool = Field(False, description="Log all SQL queries to the console")
@@ -240,8 +239,6 @@ class DBConfig(_StrictModel):
     @field_validator("url")
     @classmethod
     def validate_url_scheme(cls, v: str) -> str:
-        if v.startswith("sqlite+aiosqlite://"):
-            return v
         if v.startswith("postgresql+asyncpg://"):
             try:
                 import asyncpg  # noqa: F401

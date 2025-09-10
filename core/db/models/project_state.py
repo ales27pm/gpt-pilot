@@ -51,7 +51,6 @@ class ProjectState(Base):
     __table_args__ = (
         UniqueConstraint("prev_state_id"),
         UniqueConstraint("branch_id", "step_index"),
-        {"sqlite_autoincrement": True},
     )
 
     # ID and parent FKs

@@ -23,10 +23,13 @@ async def testmanager():
 
     This fixture is an async context manager.
     """
-    db_cfg = DBConfig(url="sqlite+aiosqlite:///:memory:")
+    db_cfg = DBConfig(url="postgresql+asyncpg://postgres:postgres@localhost:5432/test")
     manager = SessionManager(db_cfg)
-    async with manager.engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    try:
+        async with manager.engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    except Exception:
+        pytest.skip("PostgreSQL not available")
 
     yield manager
 

@@ -25,7 +25,7 @@ def _generate_id() -> str:
 
 _ID_DEFAULT = _generate_id
 
-# Use pgvector when available with automatic fallback to JSON for SQLite tests.
+# Use pgvector when available.
 if PGVector is not None:
     _EMBEDDING_TYPE = JSON().with_variant(PGVector(1536), "postgresql")
 else:  # pragma: no cover - pgvector not installed
@@ -42,8 +42,7 @@ class SharedMemory(Base):
         primary_key=True,
         default=_ID_DEFAULT,
         # Rely on SQLAlchemy's Python-side default generation for cross-dialect
-        # compatibility. PostgreSQL uses `gen_random_uuid()` via migrations, but
-        # emitting it here would break SQLite tests.
+        # compatibility. PostgreSQL uses `gen_random_uuid()` via migrations.
     )
     agent_type: Mapped[str] = mapped_column(String(50), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
