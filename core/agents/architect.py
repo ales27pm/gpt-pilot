@@ -41,15 +41,15 @@ class SystemDependency(BaseModel):
         ...,
         description="Name of the system dependency, for example Node.js or Python.",
     )
-    description: StrictStr | None = Field(
+    description: Optional[StrictStr] = Field(
         None,
         description="One-line description of the dependency.",
     )
-    test: StrictStr | None = Field(
+    test: Optional[StrictStr] = Field(
         None,
         description="Command line to test whether the dependency is available on the system.",
     )
-    required_locally: StrictBool | None = Field(
+    required_locally: Optional[StrictBool] = Field(
         None,
         description="Whether this dependency must be installed locally (as opposed to connecting to cloud or other server)",
     )
@@ -62,7 +62,7 @@ class PackageDependency(BaseModel):
         ...,
         description="Name of the package dependency, for example Express or React.",
     )
-    description: StrictStr | None = Field(
+    description: Optional[StrictStr] = Field(
         None,
         description="One-line description of the dependency.",
     )
