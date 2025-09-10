@@ -139,19 +139,13 @@ class Orchestrator(BaseAgent, GitMixin):
 
             else:
                 await self.message_broker.publish("agent.start", agent.agent_type)
-                log.debug(
-                    f"Running agent {agent.__class__.__name__} (step {self.current_state.step_index})"
-                )
+                log.debug(f"Running agent {agent.__class__.__name__} (step {self.current_state.step_index})")
                 try:
                     response = await agent.run()
                 except Exception as exc:  # noqa: BLE001
-                    log.exception(
-                        "Agent %s failed during execution", agent.agent_type, exc_info=exc
-                    )
+                    log.exception("Agent %s failed during execution", agent.agent_type, exc_info=exc)
                     response = AgentResponse.error(agent, str(exc))
-                await self.message_broker.publish(
-                    "agent.finish", {"agent": agent.agent_type, "response": response}
-                )
+                await self.message_broker.publish("agent.finish", {"agent": agent.agent_type, "response": response})
 
             if response.type == ResponseType.EXIT:
                 log.debug(f"Agent {agent.__class__.__name__} requested exit")
