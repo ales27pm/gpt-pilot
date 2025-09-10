@@ -1,7 +1,6 @@
 import copy
 import json
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -14,13 +13,9 @@ from core.db.models.project_state import IterationStatus
 from core.llm.parser import JSONParser
 from core.log import get_logger
 from core.telemetry import telemetry
-from core.ui.base import ProjectStage, pythagora_source
+from core.ui.base import ProjectStage, pythagora_source, extract_debugging_logs
 
 log = get_logger(__name__)
-
-
-DEBUG_LOG_MARK = "PYTHAGORA_DEBUGGING_LOG"
-
 
 class HuntConclusionType(str, Enum):
     ADD_LOGS = magic_words.ADD_LOGS
@@ -143,11 +138,6 @@ class BugHunter(ChatWithBreakdownMixin, BaseAgent):
             self.next_state.flag_iterations_as_modified()
         return cycles
 
-    def _extract_new_logs(self, logs: Optional[str]) -> str:
-        if not logs:
-            return ""
-        return "\n".join(line for line in logs.splitlines() if DEBUG_LOG_MARK in line)
-
     async def ask_user_to_test(self, awaiting_bug_reproduction: bool = False, awaiting_user_test: bool = False):
         await self.ui.stop_app()
         self._ensure_bug_hunting_cycles()
@@ -219,12 +209,12 @@ class BugHunter(ChatWithBreakdownMixin, BaseAgent):
                 return AgentResponse.done(self)
 
             backend_logs, frontend_logs = await self.ui.get_debugging_logs()
-            self.next_state.current_iteration["bug_hunting_cycles"][-1]["backend_logs"] = self._extract_new_logs(
-                backend_logs
-            )
-            self.next_state.current_iteration["bug_hunting_cycles"][-1]["frontend_logs"] = self._extract_new_logs(
-                frontend_logs
-            )
+            self.next_state.current_iteration["bug_hunting_cycles"][-1][
+                "backend_logs"
+            ] = extract_debugging_logs(backend_logs)
+            self.next_state.current_iteration["bug_hunting_cycles"][-1][
+                "frontend_logs"
+            ] = extract_debugging_logs(frontend_logs)
             self.next_state.current_iteration["bug_hunting_cycles"][-1]["user_feedback"] = user_feedback.text
             self.next_state.current_iteration["status"] = IterationStatus.HUNTING_FOR_BUG
 

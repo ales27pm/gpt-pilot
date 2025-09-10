@@ -196,32 +196,35 @@ class Architect(BaseAgent):
         warn_package_deps = [dep.name for dep in arch.package_dependencies if dep.name.lower() in WARN_FRAMEWORKS]
 
         if warn_system_deps:
-            answer = await self.ask_question(
+            response = await self._confirm_continue(
                 f"Warning: Pythagora doesn't officially support {', '.join(warn_system_deps)}. "
-                f"You can try to use {'it' if len(warn_system_deps) == 1 else 'them'}, but you may run into problems.",
-                buttons={"continue": "Continue", "cancel": "Cancel"},
-                buttons_only=True,
-                default="continue",
+                f"You can try to use {'it' if len(warn_system_deps) == 1 else 'them'}, but you may run into problems."
             )
-            if answer.button == "cancel":
-                return AgentResponse.update_specification(
-                    self, description="User cancelled; please reword specification."
-                )
+            if response:
+                return response
 
         if warn_package_deps:
-            answer = await self.ask_question(
+            response = await self._confirm_continue(
                 f"Warning: Pythagora works best with vanilla JavaScript. "
                 f"You can try try to use {', '.join(warn_package_deps)}, but you may run into problems. "
-                f"Visit {WARN_FRAMEWORKS_URL} for more information.",
-                buttons={"continue": "Continue", "cancel": "Cancel"},
-                buttons_only=True,
-                default="continue",
+                f"Visit {WARN_FRAMEWORKS_URL} for more information."
             )
-            if answer.button == "cancel":
-                return AgentResponse.update_specification(
-                    self, description="User cancelled; please reword specification."
-                )
+            if response:
+                return response
 
+        return None
+
+    async def _confirm_continue(self, message: str) -> Optional[AgentResponse]:
+        answer = await self.ask_question(
+            message,
+            buttons={"continue": "Continue", "cancel": "Cancel"},
+            buttons_only=True,
+            default="continue",
+        )
+        if answer.button == "cancel":
+            return AgentResponse.update_specification(
+                self, description="User cancelled; please reword specification."
+            )
         return None
 
     def prepare_example_project(self, spec: Specification):

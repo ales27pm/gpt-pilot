@@ -444,6 +444,7 @@ class IPCClientUI(UIBase):
         except UIClosedError:
             return "", ""
         if response.type != MessageType.DEBUGGING_LOGS:
+            log.warning("Unexpected message type %s while awaiting debugging logs", response.type)
             return "", ""
         content = response.content if isinstance(response.content, dict) else {}
         backend = content.get("backend") or ""
