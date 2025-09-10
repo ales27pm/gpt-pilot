@@ -17,6 +17,7 @@ from core.ui.base import ProjectStage, extract_debugging_logs, pythagora_source
 
 log = get_logger(__name__)
 
+
 class HuntConclusionType(str, Enum):
     ADD_LOGS = magic_words.ADD_LOGS
     PROBLEM_IDENTIFIED = magic_words.PROBLEM_IDENTIFIED
@@ -209,12 +210,12 @@ class BugHunter(ChatWithBreakdownMixin, BaseAgent):
                 return AgentResponse.done(self)
 
             backend_logs, frontend_logs = await self.ui.get_debugging_logs()
-            self.next_state.current_iteration["bug_hunting_cycles"][-1][
-                "backend_logs"
-            ] = extract_debugging_logs(backend_logs)
-            self.next_state.current_iteration["bug_hunting_cycles"][-1][
-                "frontend_logs"
-            ] = extract_debugging_logs(frontend_logs)
+            self.next_state.current_iteration["bug_hunting_cycles"][-1]["backend_logs"] = extract_debugging_logs(
+                backend_logs
+            )
+            self.next_state.current_iteration["bug_hunting_cycles"][-1]["frontend_logs"] = extract_debugging_logs(
+                frontend_logs
+            )
             self.next_state.current_iteration["bug_hunting_cycles"][-1]["user_feedback"] = user_feedback.text
             self.next_state.current_iteration["status"] = IterationStatus.HUNTING_FOR_BUG
 

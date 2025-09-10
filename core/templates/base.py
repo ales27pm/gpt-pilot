@@ -88,9 +88,7 @@ class BaseProjectTemplate:
         project_folder = state.branch.project.folder_name
         project_description = state.specification.description
 
-        log.info(
-            f"Applying project template {self.name} with options: {self.options_dict()}"
-        )
+        log.info(f"Applying project template {self.name} with options: {self.options_dict()}")
 
         root_dir = getattr(self.state_manager.file_system, "root", "/tmp")
         files = self.file_renderer.render_tree(

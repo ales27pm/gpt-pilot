@@ -186,27 +186,22 @@ class Architect(BaseAgent):
 
         spec.architecture = architecture_description
         spec.templates = {t.name: t.options_dict() for t in templates.values()}
-        spec.system_dependencies = [
-            d.model_dump() for d in arch.system_dependencies or [] if d
-        ]
-        spec.package_dependencies = [
-            d.model_dump() for d in arch.package_dependencies or [] if d
-        ]
+        spec.system_dependencies = [d.model_dump() for d in arch.system_dependencies or [] if d]
+        spec.package_dependencies = [d.model_dump() for d in arch.package_dependencies or [] if d]
         telemetry.set("architecture", json.loads(arch.model_dump_json()))
 
         return None
+
     async def check_compatibility(self, arch: Architecture) -> Optional[AgentResponse]:
         warn_system_deps = [
             dep.name
             for dep in arch.system_dependencies or []
-            if getattr(dep, "name", None)
-            and dep.name.lower() in WARN_SYSTEM_DEPS
+            if getattr(dep, "name", None) and dep.name.lower() in WARN_SYSTEM_DEPS
         ]
         warn_package_deps = [
             dep.name
             for dep in arch.package_dependencies or []
-            if getattr(dep, "name", None)
-            and dep.name.lower() in WARN_FRAMEWORKS
+            if getattr(dep, "name", None) and dep.name.lower() in WARN_FRAMEWORKS
         ]
 
         if warn_system_deps:
@@ -236,9 +231,7 @@ class Architect(BaseAgent):
             default="continue",
         )
         if answer.button == "cancel":
-            return AgentResponse.update_specification(
-                self, description="User cancelled; please reword specification."
-            )
+            return AgentResponse.update_specification(self, description="User cancelled; please reword specification.")
         return None
 
     def prepare_example_project(self, spec: Specification):

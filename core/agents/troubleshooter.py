@@ -85,7 +85,14 @@ class Troubleshooter(ChatWithBreakdownMixin, IterationPromptMixin, RelevantFiles
         # use "current_iteration" here
         last_iteration = self.current_state.iterations[-1] if len(self.current_state.iterations) >= 3 else None
 
-        should_iterate, is_loop, bug_report, change_description, backend_logs, frontend_logs = await self.get_user_feedback(
+        (
+            should_iterate,
+            is_loop,
+            bug_report,
+            change_description,
+            backend_logs,
+            frontend_logs,
+        ) = await self.get_user_feedback(
             run_command,
             user_instructions,
             last_iteration is not None,
