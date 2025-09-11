@@ -15,7 +15,8 @@ class VirtualUI(UIBase):
 
     def __init__(self, inputs: list[dict[str, str]]):
         self.virtual_inputs = [UserInput(**input) for input in inputs]
-        self._app_link: Optional[str] = None
+        self._app_link = None
+        self._streaming_logs = False
         self._important_stream_open = False
         self._breakdown_stream_open = False
 
@@ -49,8 +50,7 @@ class VirtualUI(UIBase):
             print(message)
 
     async def send_key_expired(self, message: Optional[str] = None):
-        if message:
-            print(f"(key-expired) {message}")
+        print(f"(key-expired) {message}" if message else "(key-expired)")
 
     async def send_app_finished(
         self,

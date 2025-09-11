@@ -21,7 +21,6 @@ from core.templates.registry import (
 ARCHITECTURE_STEP_NAME = "Project architecture"
 WARN_SYSTEM_DEPS = ["docker", "kubernetes", "microservices"]
 WARN_FRAMEWORKS = ["next.js", "vue", "vue.js", "svelte", "angular"]
-WARN_FRAMEWORKS_URL = "https://github.com/Pythagora-io/gpt-pilot/wiki/Using-GPT-Pilot-with-frontend-frameworks"
 
 log = get_logger(__name__)
 
@@ -219,10 +218,10 @@ class Architect(BaseAgent):
             if response:
                 return response
 
+        # Offer cancel path to revise specification when unsupported frameworks are present
         if warn_frameworks:
             answer = await self.ask_question(
-                f"Pythagora doesn't support {', '.join(warn_frameworks)}. Continue anyway? "
-                f"Visit {WARN_FRAMEWORKS_URL} for more information.",
+                f"Pythagora doesn't support {', '.join(warn_frameworks)}. Continue anyway?",
                 buttons={"continue": "Continue", "cancel": "Cancel"},
                 buttons_only=True,
                 default="continue",
@@ -230,7 +229,7 @@ class Architect(BaseAgent):
             if getattr(answer, "button", None) == "cancel":
                 return AgentResponse.update_specification(
                     self,
-                    description=f"Unsupported frameworks: {', '.join(warn_frameworks)}",
+                    description="User cancelled; please reword specification.",
                 )
 
         return None
