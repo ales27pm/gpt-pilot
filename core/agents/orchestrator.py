@@ -230,13 +230,17 @@ class Orchestrator(BaseAgent, GitMixin):
         """
 
         log.info("Checking for offline changes.")
-        modified_files = await self.state_manager.get_modified_files_with_content()
+        modified_files = await self.state_manager.get_modified_files_with_content() or []
 
         if self.state_manager.workspace_is_empty():
-            # NOTE: this will currently get triggered on a new project, but will do
-            # nothing as there's no files in the database.
-            log.info("Detected empty workspace, restoring state from the database.")
-            await self.state_manager.restore_files()
+            if modified_files:
+                log.debug("Empty workspace contains files on disk, importing into Pythagora.")
+                await self.import_files()
+            else:
+                # NOTE: this will currently get triggered on a new project, but will do
+                # nothing as there's no files in the database.
+                log.info("Detected empty workspace with no disk changes, restoring state from the database.")
+                await self.state_manager.restore_files()
         elif modified_files:
             await self.send_message(f"We found {len(modified_files)} new and/or modified files.")
             await self.ui.send_modified_files(modified_files)
