@@ -30,6 +30,4 @@ class Chat:
 
     async def get_nowait(self) -> Optional[Any]:
         """Return the next message if available, otherwise ``None``."""
-        if self._broker.queue_length(self._queue):
-            return await self.receive()
-        return None
+        return await self.receive() if self._broker.queue_length(self._queue) else None
