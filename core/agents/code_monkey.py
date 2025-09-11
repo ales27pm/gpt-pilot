@@ -50,9 +50,7 @@ class ReviewChanges(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid")
 
     hunks: list[Hunk]
-    review_notes: StrictStr = Field(
-        description="Additional review notes (optional, can be empty)."
-    )
+    review_notes: StrictStr = Field(description="Additional review notes (optional, can be empty).")
 
 
 class FileDescription(BaseModel):

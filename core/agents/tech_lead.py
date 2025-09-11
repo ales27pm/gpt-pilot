@@ -39,9 +39,7 @@ class Task(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid")
 
     description: str = Field(description="Description of a task.")
-    related_api_endpoints: list[APIEndpoint] = Field(
-        description="API endpoints that will be implemented in this task."
-    )
+    related_api_endpoints: list[APIEndpoint] = Field(description="API endpoints that will be implemented in this task.")
     testing_instructions: str = Field(description="Instructions for testing the task.")
 
 

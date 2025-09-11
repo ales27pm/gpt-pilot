@@ -131,10 +131,7 @@ class VirtualUI(UIBase):
         source_index: int = 1,
         tasks: JSONList | None = None,
     ) -> None:
-        print(
-            f"(task-progress) {index}/{n_tasks} {description}"
-            f" source={source} status={status}"
-        )
+        print(f"(task-progress) {index}/{n_tasks} {description} source={source} status={status}")
 
     async def send_step_progress(
         self,

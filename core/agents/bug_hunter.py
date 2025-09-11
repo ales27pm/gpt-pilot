@@ -50,9 +50,7 @@ class ImportantLog(BaseModel):
 class ImportantLogsForDebugging(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid")
 
-    logs: list[ImportantLog] = Field(
-        description="Important logs that will help the human debug the current bug."
-    )
+    logs: list[ImportantLog] = Field(description="Important logs that will help the human debug the current bug.")
 
 
 class BugHunter(ChatWithBreakdownMixin, BaseAgent):

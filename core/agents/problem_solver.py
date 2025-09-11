@@ -16,9 +16,7 @@ log = get_logger(__name__)
 class AlternativeSolutions(BaseModel):
     model_config = ConfigDict(strict=True, extra="forbid")
 
-    alternative_solutions: list[StrictStr] = Field(
-        description="List of alternative solutions for the recurring issue."
-    )
+    alternative_solutions: list[StrictStr] = Field(description="List of alternative solutions for the recurring issue.")
 
 
 class ProblemSolver(IterationPromptMixin, BaseAgent):
