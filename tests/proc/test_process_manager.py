@@ -99,6 +99,35 @@ async def test_local_process_wait_handles_unresponsive_process(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_local_process_wait_handles_system_exit(tmp_path):
+    cmd = SLEEP_CMD
+
+    lp = await LocalProcess.start(
+        cmd,
+        cwd=tmp_path,
+        env=ENV,
+        bg=False,
+        kill_wait_timeout=0.1,
+    )
+
+    orig_wait = lp._process.wait
+
+    async def raise_system_exit():
+        raise SystemExit
+
+    lp._process.wait = AsyncMock(side_effect=raise_system_exit)
+
+    with patch.object(LocalProcess, "terminate", AsyncMock(wraps=lp.terminate)) as term:
+        ret = await lp.wait(0.1)
+        assert ret == -1
+        term.assert_awaited()
+
+    # ensure underlying wait coroutine restored and awaited for cleanup
+    lp._process.wait = orig_wait
+    await lp._process.wait()
+
+
+@pytest.mark.asyncio
 @patch("core.proc.process_manager.WATCHER_IDLE_INTERVAL", 0.1)
 async def test_process_manager_run_command_capture_stdout(tmp_path):
     pm = ProcessManager(root_dir=tmp_path)

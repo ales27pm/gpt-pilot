@@ -8,10 +8,6 @@ from core.llm.base import APIError
 from core.llm.convo import Convo
 from core.llm.openai_client import OpenAIClient
 
-run_integration_tests = getenv("INTEGRATION_TESTS", "").lower()
-if run_integration_tests not in ["true", "yes", "1", "on"]:
-    pytest.skip("Skipping integration tests", allow_module_level=True)
-
 if not getenv("OPENAI_API_KEY"):
     pytest.skip(
         "Skipping OpenAI integration tests: OPENAI_API_KEY is not set",

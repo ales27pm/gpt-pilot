@@ -77,15 +77,33 @@ class LocalProcess:
             retcode = await future
         except asyncio.TimeoutError:
             log.debug(f"Process {self.cmd} still running after {timeout}s, terminating")
-            await self.terminate()
+            # Try graceful termination first
+            await self.terminate(kill=False)
             try:
-                retcode = await asyncio.wait_for(self._process.wait(), self.kill_wait_timeout)
-            except asyncio.TimeoutError:
-                log.warning(
-                    "Process %s did not exit after SIGKILL; forcing return code -1",
-                    self.cmd,
+                retcode = await asyncio.wait_for(
+                    self._process.wait(), self.kill_wait_timeout
                 )
-                retcode = -1
+            except asyncio.TimeoutError:
+                log.debug(
+                    "Process %s ignored SIGTERM; sending SIGKILL", self.cmd
+                )
+                await self.terminate(kill=True)
+                try:
+                    retcode = await asyncio.wait_for(
+                        self._process.wait(), self.kill_wait_timeout
+                    )
+                except asyncio.TimeoutError:
+                    log.warning(
+                        "Process %s did not exit after SIGKILL; forcing return code -1",
+                        self.cmd,
+                    )
+                    retcode = -1
+        except SystemExit:
+            log.debug(
+                "Process %s raised SystemExit while waiting; terminating", self.cmd
+            )
+            await self.terminate(kill=True)
+            retcode = -1
 
         return retcode
 
@@ -139,10 +157,20 @@ class LocalProcess:
         psutil.wait_procs(processes, timeout=1)
 
     async def terminate(self, kill: bool = True):
-        if kill and sys.platform != "win32":
+        """Terminate the process tree.
+
+        When ``kill`` is ``False`` we attempt a graceful shutdown using
+        ``SIGTERM``. If ``kill`` is ``True`` (or on Windows), ``SIGKILL`` is
+        used to forcefully stop the process.  Windows does not support
+        ``SIGKILL`` so ``SIGTERM`` is always used there.
+        """
+        if sys.platform == "win32":
+            await self._terminate_process_tree(signal.SIGTERM)
+            return
+
+        if kill:
             await self._terminate_process_tree(signal.SIGKILL)
         else:
-            # Windows doesn't have SIGKILL
             await self._terminate_process_tree(signal.SIGTERM)
 
     @property
