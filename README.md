@@ -16,6 +16,10 @@ as a standalone command‑line tool.
 - State stored in PostgreSQL with pgvector extension for semantic context retrieval.
 - Optional web frontend started alongside the backend.
 
+## Agent Principles
+
+GPT Pilot follows guiding principles for multi-agent UX. See [docs/agent_principles.md](docs/agent_principles.md) for details.
+
 ## How it works
 
 1. Describe the application you want to build.
