@@ -10,7 +10,7 @@ from core.state.state_manager import StateManager
 from core.ui.base import AgentSource, UIBase, UserInput, pythagora_source
 
 if TYPE_CHECKING:  # pragma: no cover - only for type checkers
-    from core.messaging import MessageBroker
+    from core.messaging import Chat, MessageBroker
 
 log = get_logger(__name__)
 
@@ -34,8 +34,12 @@ class BaseAgent:
         data: Optional[Any] = None,
         args: Optional[Any] = None,
     ):
-        """
-        Create a new agent.
+        """Create a new agent.
+
+        ``message_broker`` and ``chat`` are communication channels injected by
+        the orchestrator prior to calling :meth:`run`. They are ``None`` during
+        construction and should not be used until the orchestrator assigns
+        concrete instances.
         """
         self.ui_source = AgentSource(self.display_name, self.agent_type)
         self.ui = ui
@@ -46,7 +50,10 @@ class BaseAgent:
         self.data = data
         self.args = args
         self.memory = state_manager.shared_memory
+        # Populated by :class:`Orchestrator` before ``run`` is invoked so agents
+        # can exchange messages or chat with the controller.
         self.message_broker: Optional["MessageBroker"] = None
+        self.chat: Optional["Chat"] = None
 
     @property
     def current_state(self) -> ProjectState:

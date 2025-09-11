@@ -25,7 +25,7 @@ from core.agents.troubleshooter import Troubleshooter
 from core.agents.web_search import WebSearch
 from core.db.models.project_state import IterationStatus, TaskStatus
 from core.log import get_logger
-from core.messaging import MessageBroker
+from core.messaging import Chat, MessageBroker
 from core.telemetry import telemetry
 
 log = get_logger(__name__)
@@ -44,119 +44,144 @@ class Orchestrator(BaseAgent, GitMixin):
     display_name = "Orchestrator"
 
     async def run(self) -> bool:
-        """
-        Run the Orchestrator agent.
+        """Run the Orchestrator agent."""
 
-        :return: True if the Orchestrator exited successfully, False otherwise.
-        """
-        response = None
+        response: Optional[AgentResponse] = None
 
         log.info(f"Starting {__name__}.Orchestrator")
 
         self.message_broker = MessageBroker()
+        self.chat = Chat(self.message_broker)
         self.executor = Executor(self.state_manager, self.ui)
         self.process_manager = self.executor.process_manager
-        # self.chat = Chat() TODO
 
         await self.init_ui()
         await self.offline_changes_check()
-
         await self.install_dependencies()
 
         if self.args.use_git and await self.check_git_installed():
             await self.init_git_if_needed()
 
-        # TODO: consider refactoring this into two loop; the outer with one iteration per comitted step,
-        # and the inner which runs the agents for the current step until they're done. This would simplify
-        # handle_done() and let us do other per-step processing (eg. describing files) in between agent runs.
+        while True:
+            last_agent, response = await self._run_step(response)
+
+            if response.type == ResponseType.EXIT:
+                log.debug(f"Agent {last_agent.__class__.__name__} requested exit")
+                return True
+
+            response = await self.handle_done(last_agent, response)
+
+        return True
+
+    async def _run_step(self, previous_response: Optional[AgentResponse]) -> tuple[BaseAgent, AgentResponse]:
+        """Process agents for a single step until completion."""
+
+        response = previous_response
+        last_agent: BaseAgent | None = None
+
         while True:
             await self.update_stats()
 
             agent = self.create_agent(response)
+            self._attach_channels(agent)
 
-            # Attach message broker to the agent(s).
-            if isinstance(agent, list):
-                for a in agent:
-                    a.message_broker = self.message_broker
-            else:
-                agent.message_broker = self.message_broker
+            last_agent, response = await self._execute_agent(agent)
 
-            # In case where agent is a list, run all agents in parallel.
-            # Only one agent type can be run in parallel at a time (for now). See handle_parallel_responses().
-            if isinstance(agent, list):
-                for single_agent in agent:
-                    await self.message_broker.publish("agent.start", single_agent.agent_type)
-                tasks = [single_agent.run() for single_agent in agent]
-                log.debug(
-                    f"Running agents {[a.__class__.__name__ for a in agent]} (step {self.current_state.step_index})"
+            if response.type in {ResponseType.EXIT, ResponseType.DONE}:
+                return last_agent, response
+
+    def _attach_channels(self, agent: Union[BaseAgent, list[BaseAgent]]) -> None:
+        """Attach message broker and chat channel to ``agent`` or ``agents``."""
+
+        if isinstance(agent, list):
+            for a in agent:
+                a.message_broker = self.message_broker
+                a.chat = self.chat
+        else:
+            agent.message_broker = self.message_broker
+            agent.chat = self.chat
+
+    async def _execute_agent(self, agent: Union[BaseAgent, list[BaseAgent]]) -> tuple[BaseAgent, AgentResponse]:
+        """Run ``agent`` (or agents) and return the final response."""
+
+        if isinstance(agent, list):
+            response = await self._run_parallel_agents(agent)
+            last_agent = agent[0]
+        else:
+            response = await self._run_single_agent(agent)
+            last_agent = agent
+        return last_agent, response
+
+    async def _run_single_agent(self, agent: BaseAgent) -> AgentResponse:
+        """Execute a single agent and publish lifecycle events."""
+
+        await self.message_broker.publish("agent.start", agent.agent_type)
+        log.debug(f"Running agent {agent.__class__.__name__} (step {self.current_state.step_index})")
+        try:
+            response = await agent.run()
+        except Exception as exc:  # noqa: BLE001
+            log.exception("Agent %s failed during execution", agent.agent_type, exc_info=exc)
+            response = AgentResponse.error(agent, str(exc))
+        await self.message_broker.publish("agent.finish", {"agent": agent.agent_type, "response": response})
+        return response
+
+    async def _run_parallel_agents(self, agents: list[BaseAgent]) -> AgentResponse:
+        """Run ``agents`` in parallel and handle their responses."""
+
+        for single_agent in agents:
+            await self.message_broker.publish("agent.start", single_agent.agent_type)
+        tasks = [single_agent.run() for single_agent in agents]
+        log.debug(f"Running agents {[a.__class__.__name__ for a in agents]} (step {self.current_state.step_index})")
+        raw_responses = await asyncio.gather(*tasks, return_exceptions=True)
+        responses: list[AgentResponse] = []
+        for single_agent, single_response in zip(agents, raw_responses):
+            if isinstance(single_response, Exception):
+                log.exception(
+                    "Agent %s failed during parallel execution",
+                    single_agent.agent_type,
                 )
-                raw_responses = await asyncio.gather(*tasks, return_exceptions=True)
-                responses = []
-                for single_agent, single_response in zip(agent, raw_responses):
-                    if isinstance(single_response, Exception):
-                        log.exception(
-                            "Agent %s failed during parallel execution",
-                            single_agent.agent_type,
-                            exc_info=single_response,
-                        )
-                        single_response = AgentResponse.error(single_agent, str(single_response))
-                    responses.append(single_response)
-                    await self.message_broker.publish(
-                        "agent.finish",
-                        {
-                            "agent": single_agent.agent_type,
-                            "response": single_response,
-                        },
-                    )
-                response = self.handle_parallel_responses(agent[0], responses)
+                single_response = AgentResponse.error(single_agent, str(single_response))
+            responses.append(single_response)
+            await self.message_broker.publish(
+                "agent.finish",
+                {"agent": single_agent.agent_type, "response": single_response},
+            )
 
-                should_update_knowledge_base = any(
-                    "src/pages/" in single_agent.step.get("save_file", {}).get("path", "")
-                    or "src/api/" in single_agent.step.get("save_file", {}).get("path", "")
-                    or len(single_agent.step.get("related_api_endpoints", [])) > 0
-                    for single_agent in agent
-                )
+        await self._update_knowledge_base(agents)
 
-                if should_update_knowledge_base:
-                    files_with_implemented_apis = []
-                    file_cache: dict[str, str] = {}
-                    for single_agent in agent:
-                        endpoints = single_agent.step.get("related_api_endpoints")
-                        path = single_agent.step.get("save_file", {}).get("path", None)
-                        if not endpoints or not path:
-                            continue
-                        if path not in file_cache:
-                            file_obj = await self.state_manager.get_file_by_path(path)
-                            file_cache[path] = file_obj.content.content if file_obj else ""
-                        content = file_cache[path]
-                        endpoint_infos = []
-                        for endpoint in endpoints:
-                            line_nums = [i for i, line in enumerate(content.splitlines(), start=1) if endpoint in line]
-                            endpoint_infos.append({"endpoint": endpoint, "lines": line_nums})
-                        files_with_implemented_apis.append({"path": path, "endpoints": endpoint_infos})
-                    await self.state_manager.update_apis(files_with_implemented_apis)
-                    await self.state_manager.update_implemented_pages_and_apis()
+        return self.handle_parallel_responses(agents[0], responses)
 
-            else:
-                await self.message_broker.publish("agent.start", agent.agent_type)
-                log.debug(f"Running agent {agent.__class__.__name__} (step {self.current_state.step_index})")
-                try:
-                    response = await agent.run()
-                except Exception as exc:  # noqa: BLE001
-                    log.exception("Agent %s failed during execution", agent.agent_type, exc_info=exc)
-                    response = AgentResponse.error(agent, str(exc))
-                await self.message_broker.publish("agent.finish", {"agent": agent.agent_type, "response": response})
+    async def _update_knowledge_base(self, agents: list[BaseAgent]) -> None:
+        """Update knowledge base if any agent implemented APIs or pages."""
 
-            if response.type == ResponseType.EXIT:
-                log.debug(f"Agent {agent.__class__.__name__} requested exit")
-                break
+        should_update = any(
+            "src/pages/" in a.step.get("save_file", {}).get("path", "")
+            or "src/api/" in a.step.get("save_file", {}).get("path", "")
+            or len(a.step.get("related_api_endpoints", [])) > 0
+            for a in agents
+        )
 
-            if response.type == ResponseType.DONE:
-                response = await self.handle_done(agent, response)
+        if not should_update:
+            return
+
+        files_with_implemented_apis = []
+        file_cache: dict[str, str] = {}
+        for agent in agents:
+            endpoints = agent.step.get("related_api_endpoints")
+            path = agent.step.get("save_file", {}).get("path", None)
+            if not endpoints or not path:
                 continue
-
-        # TODO: rollback changes to "next" so they aren't accidentally committed?
-        return True
+            if path not in file_cache:
+                file_obj = await self.state_manager.get_file_by_path(path)
+                file_cache[path] = file_obj.content.content if file_obj else ""
+            content = file_cache[path]
+            endpoint_infos = []
+            for endpoint in endpoints:
+                line_nums = [i for i, line in enumerate(content.splitlines(), start=1) if endpoint in line]
+                endpoint_infos.append({"endpoint": endpoint, "lines": line_nums})
+            files_with_implemented_apis.append({"path": path, "endpoints": endpoint_infos})
+        await self.state_manager.update_apis(files_with_implemented_apis)
+        await self.state_manager.update_implemented_pages_and_apis()
 
     async def install_dependencies(self):
         # First check if package.json exists
