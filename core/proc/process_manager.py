@@ -105,6 +105,7 @@ class LocalProcess:
             await self.terminate(kill=True)
             raise
 
+        # Propagate the final exit code back to the caller.
         return retcode
 
     @staticmethod
