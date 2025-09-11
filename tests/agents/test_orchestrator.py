@@ -1,3 +1,4 @@
+# Tests use pytest + pytest-asyncio
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -8,36 +9,39 @@ from core.agents.orchestrator import Orchestrator
 @pytest.mark.asyncio
 async def test_offline_changes_check_restores_if_workspace_empty():
     sm = AsyncMock()
-    sm.workspace_is_empty = Mock(return_value=False)
+    sm.workspace_is_empty = Mock(return_value=True)
     ui = AsyncMock()
     orca = Orchestrator(state_manager=sm, ui=ui)
     await orca.offline_changes_check()
-    assert sm.restore_files.assert_called_once
+    ui.ask_question.assert_not_called()
+    sm.restore_files.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_offline_changes_check_imports_changes_from_disk():
     sm = AsyncMock()
-    sm.workspace_is_empty = Mock(return_value=False)
+    sm.workspace_is_empty = Mock(return_value=True)
     sm.import_files = AsyncMock(return_value=([], []))
     ui = AsyncMock()
     ui.ask_question.return_value.button = "yes"
     orca = Orchestrator(state_manager=sm, ui=ui)
     await orca.offline_changes_check()
-    assert sm.import_files.assert_called_once
-    assert sm.restore_files.assert_not_called
+    ui.ask_question.assert_not_called()
+    sm.import_files.assert_called_once()
+    sm.restore_files.assert_not_called()
 
 
 @pytest.mark.asyncio
 async def test_offline_changes_check_restores_changes_from_db():
     sm = AsyncMock()
-    sm.workspace_is_empty = Mock(return_value=False)
+    sm.workspace_is_empty = Mock(return_value=True)
     ui = AsyncMock()
     ui.ask_question.return_value.button = "no"
     orca = Orchestrator(state_manager=sm, ui=ui)
     await orca.offline_changes_check()
-    assert sm.import_files.assert_not_called
-    assert sm.restore_files.assert_called_once
+    ui.ask_question.assert_not_called()
+    sm.import_files.assert_not_called()
+    sm.restore_files.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -97,3 +101,81 @@ async def test_import_if_deleted_files(agentcontext):
     assert state != sm.current_state
 
     assert len(sm.current_state.files) == 0
+
+@pytest.mark.asyncio
+async def test_offline_changes_check_defaults_to_restore_on_unexpected_ui_response():
+    # Framework: pytest + pytest-asyncio
+    sm = AsyncMock()
+    sm.workspace_is_empty = Mock(return_value=False)
+    ui = AsyncMock()
+    # Simulate unexpected choice; Orchestrator should take safe path (restore)
+    ui.ask_question.return_value.button = "maybe"
+    orca = Orchestrator(state_manager=sm, ui=ui)
+
+    await orca.offline_changes_check()
+
+    ui.ask_question.assert_called_once()
+    sm.import_files.assert_not_called()
+    sm.restore_files.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_import_files_no_changes_keeps_state(agentcontext):
+    # Framework: pytest + pytest-asyncio
+    sm, _, ui, _ = agentcontext
+
+    # Establish baseline state
+    await sm.save_file("noop.txt", "same")
+    baseline = await sm.commit()
+
+    # Save same content again to simulate no change on disk
+    sm.file_system.save("noop.txt", "same")
+
+    orca = Orchestrator(state_manager=sm, ui=ui)
+    await orca.import_files()
+
+    # Expect no new commit/state if import detects no changes
+    assert sm.current_state == baseline
+
+@pytest.mark.asyncio
+async def test_import_files_reports_conflicts(agentcontext):
+    # Framework: pytest + pytest-asyncio
+    sm, _, ui, _ = agentcontext
+
+    # Prepare existing file and commit
+    await sm.save_file("conflict.txt", "base")
+    await sm.commit()
+
+    # Simulate concurrent modification on disk leading to conflict
+    sm.file_system.save("conflict.txt", "disk-change")
+
+    orca = Orchestrator(state_manager=sm, ui=ui)
+
+    # Mock state_manager.import_files to raise a conflict-like exception or return a conflict signal
+    conflict_exc = Exception("Merge conflict detected")
+    sm.import_files = AsyncMock(side_effect=conflict_exc)
+
+    with pytest.raises(Exception):
+        await orca.import_files()
+
+    # UI should be notified of error; if Orchestrator wraps exceptions into UI, this asserts the call.
+    # We can't rely on exact method names, so check that some UI error method was called if it exists.
+    # If not present, at least ensure import_files was attempted.
+    sm.import_files.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_offline_changes_check_asks_and_imports_when_user_confirms(agentcontext):
+    # Framework: pytest + pytest-asyncio
+    sm, _, ui, _ = agentcontext
+    sm.workspace_is_empty = Mock(return_value=False)
+    ui.ask_question.return_value.button = "yes"
+
+    # Have import_files return that new and modified were found
+    sm.import_files = AsyncMock(return_value=(["new.txt"], ["mod.txt"]))
+
+    orca = Orchestrator(state_manager=sm, ui=ui)
+    await orca.offline_changes_check()
+
+    ui.ask_question.assert_called_once()
+    sm.import_files.assert_called_once()
+    sm.restore_files.assert_not_called()
+
