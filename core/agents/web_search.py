@@ -1,7 +1,7 @@
 from dataclasses import asdict
 from typing import List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, StrictStr
 
 from core.agents.base import BaseAgent
 from core.agents.convo import AgentConvo
@@ -14,7 +14,9 @@ log = get_logger(__name__)
 
 
 class WebQueries(BaseModel):
-    queries: List[str]
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    queries: List[StrictStr]
 
 
 class WebSearch(BaseAgent):

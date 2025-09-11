@@ -2,7 +2,7 @@ import asyncio
 from urllib.parse import urljoin
 
 import httpx
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, StrictStr
 
 from core.agents.base import BaseAgent
 from core.agents.convo import AgentConvo
@@ -16,11 +16,15 @@ log = get_logger(__name__)
 
 
 class DocQueries(BaseModel):
-    queries: list[str]
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    queries: list[StrictStr]
 
 
 class SelectedDocsets(BaseModel):
-    docsets: list[str]
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    docsets: list[StrictStr]
 
 
 class ExternalDocumentation(BaseAgent):

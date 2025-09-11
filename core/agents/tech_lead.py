@@ -1,7 +1,7 @@
 import json
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from core.agents.base import BaseAgent
 from core.agents.convo import AgentConvo
@@ -20,6 +20,8 @@ log = get_logger(__name__)
 
 
 class APIEndpoint(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     description: str = Field(description="Description of an API endpoint.")
     method: str = Field(description="HTTP method of the API endpoint.")
     endpoint: str = Field(description="URL of the API endpoint.")
@@ -28,20 +30,30 @@ class APIEndpoint(BaseModel):
 
 
 class Epic(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     description: str = Field(description="Description of an epic.")
 
 
 class Task(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     description: str = Field(description="Description of a task.")
-    related_api_endpoints: list[APIEndpoint] = Field(description="API endpoints that will be implemented in this task.")
+    related_api_endpoints: list[APIEndpoint] = Field(
+        description="API endpoints that will be implemented in this task."
+    )
     testing_instructions: str = Field(description="Instructions for testing the task.")
 
 
 class DevelopmentPlan(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     plan: list[Epic] = Field(description="List of epics that need to be done to implement the entire plan.")
 
 
 class EpicPlan(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     plan: list[Task] = Field(description="List of tasks that need to be done to implement the entire epic.")
 
 

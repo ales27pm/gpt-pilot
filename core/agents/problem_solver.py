@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictStr
 
 from core.agents.base import BaseAgent
 from core.agents.convo import AgentConvo
@@ -14,7 +14,11 @@ log = get_logger(__name__)
 
 
 class AlternativeSolutions(BaseModel):
-    alternative_solutions: list[str] = Field(description="List of alternative solutions for the recurring issue.")
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    alternative_solutions: list[StrictStr] = Field(
+        description="List of alternative solutions for the recurring issue."
+    )
 
 
 class ProblemSolver(IterationPromptMixin, BaseAgent):

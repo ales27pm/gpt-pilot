@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from core.agents.base import BaseAgent
 from core.agents.convo import AgentConvo
@@ -23,6 +23,8 @@ class CommandResult(BaseModel):
     """
     Analysis of the command run and decision on the next steps.
     """
+
+    model_config = ConfigDict(strict=True, extra="forbid")
 
     analysis: str = Field(
         description="Analysis of the command output (stdout, stderr) and exit code, in context of the current task"

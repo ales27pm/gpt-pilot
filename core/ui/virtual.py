@@ -16,7 +16,6 @@ class VirtualUI(UIBase):
     def __init__(self, inputs: list[dict[str, str]]):
         self.virtual_inputs = [UserInput(**input) for input in inputs]
         self._app_link: Optional[str] = None
-        self._streaming_logs = False
         self._important_stream_open = False
         self._breakdown_stream_open = False
 
@@ -109,14 +108,18 @@ class VirtualUI(UIBase):
             return UserInput(text="")
 
     async def send_project_stage(self, data: JSONDict) -> None:
-        pass
+        print(f"(project-stage) {data}")
 
     async def send_epics_and_tasks(
         self,
         epics: JSONList | None = None,
         tasks: JSONList | None = None,
     ) -> None:
-        pass
+        print("(epics-and-tasks)")
+        if epics:
+            print(f"  epics={epics}")
+        if tasks:
+            print(f"  tasks={tasks}")
 
     async def send_task_progress(
         self,
@@ -128,7 +131,10 @@ class VirtualUI(UIBase):
         source_index: int = 1,
         tasks: JSONList | None = None,
     ) -> None:
-        pass
+        print(
+            f"(task-progress) {index}/{n_tasks} {description}"
+            f" source={source} status={status}"
+        )
 
     async def send_step_progress(
         self,
@@ -137,13 +143,13 @@ class VirtualUI(UIBase):
         step: JSONDict,
         task_source: str,
     ) -> None:
-        pass
+        print(f"(step-progress) {index}/{n_steps} {step} source={task_source}")
 
     async def send_data_about_logs(
         self,
         data_about_logs: JSONDict,
     ) -> None:
-        pass
+        print(f"(logs) {data_about_logs}")
 
     async def get_debugging_logs(self) -> tuple[str, str]:
         return "", ""
@@ -152,7 +158,7 @@ class VirtualUI(UIBase):
         self,
         modified_files: JSONList,
     ) -> None:
-        pass
+        print(f"(modified-files) {modified_files}")
 
     async def send_run_command(self, run_command: str):
         print(f"(run) {run_command}")
