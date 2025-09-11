@@ -4,12 +4,15 @@ from core.messaging import Chat, MessageBroker
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("payload", [
-    {"role": "user", "content": "hi"},
-    "hello",
-    42,
-    [1, 2, 3],
-])
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"role": "user", "content": "hi"},
+        "hello",
+        42,
+        [1, 2, 3],
+    ],
+)
 async def test_chat_publish_and_receive(payload):
     broker = MessageBroker()
     chat = Chat(broker)

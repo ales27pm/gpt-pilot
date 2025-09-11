@@ -42,8 +42,6 @@ class Orchestrator(BaseAgent, GitMixin):
     agent_type = "orchestrator"
     display_name = "Orchestrator"
 
-
-
     async def run(self) -> bool:
         """Run the Orchestrator agent."""
 
@@ -74,9 +72,7 @@ class Orchestrator(BaseAgent, GitMixin):
 
         return True
 
-    async def _run_step(
-        self, previous_response: Optional[AgentResponse]
-    ) -> tuple[BaseAgent, AgentResponse]:
+    async def _run_step(self, previous_response: Optional[AgentResponse]) -> tuple[BaseAgent, AgentResponse]:
         """Process agents for a single step until completion."""
 
         response = previous_response
@@ -104,9 +100,7 @@ class Orchestrator(BaseAgent, GitMixin):
             agent.message_broker = self.message_broker
             agent.chat = self.chat
 
-    async def _execute_agent(
-        self, agent: Union[BaseAgent, list[BaseAgent]]
-    ) -> tuple[BaseAgent, AgentResponse]:
+    async def _execute_agent(self, agent: Union[BaseAgent, list[BaseAgent]]) -> tuple[BaseAgent, AgentResponse]:
         """Run ``agent`` (or agents) and return the final response."""
 
         if isinstance(agent, list):
@@ -121,17 +115,13 @@ class Orchestrator(BaseAgent, GitMixin):
         """Execute a single agent and publish lifecycle events."""
 
         await self.message_broker.publish("agent.start", agent.agent_type)
-        log.debug(
-            f"Running agent {agent.__class__.__name__} (step {self.current_state.step_index})"
-        )
+        log.debug(f"Running agent {agent.__class__.__name__} (step {self.current_state.step_index})")
         try:
             response = await agent.run()
         except Exception as exc:  # noqa: BLE001
             log.exception("Agent %s failed during execution", agent.agent_type, exc_info=exc)
             response = AgentResponse.error(agent, str(exc))
-        await self.message_broker.publish(
-            "agent.finish", {"agent": agent.agent_type, "response": response}
-        )
+        await self.message_broker.publish("agent.finish", {"agent": agent.agent_type, "response": response})
         return response
 
     async def _run_parallel_agents(self, agents: list[BaseAgent]) -> AgentResponse:
@@ -140,9 +130,7 @@ class Orchestrator(BaseAgent, GitMixin):
         for single_agent in agents:
             await self.message_broker.publish("agent.start", single_agent.agent_type)
         tasks = [single_agent.run() for single_agent in agents]
-        log.debug(
-            f"Running agents {[a.__class__.__name__ for a in agents]} (step {self.current_state.step_index})"
-        )
+        log.debug(f"Running agents {[a.__class__.__name__ for a in agents]} (step {self.current_state.step_index})")
         raw_responses = await asyncio.gather(*tasks, return_exceptions=True)
         responses: list[AgentResponse] = []
         for single_agent, single_response in zip(agents, raw_responses):
@@ -194,8 +182,6 @@ class Orchestrator(BaseAgent, GitMixin):
             files_with_implemented_apis.append({"path": path, "endpoints": endpoint_infos})
         await self.state_manager.update_apis(files_with_implemented_apis)
         await self.state_manager.update_implemented_pages_and_apis()
-
-    
 
     async def install_dependencies(self):
         # First check if package.json exists
