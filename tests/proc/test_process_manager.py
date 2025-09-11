@@ -121,6 +121,7 @@ async def test_local_process_wait_handles_system_exit(tmp_path):
         ret = await lp.wait(0.1)
         assert ret == -1
         term.assert_awaited()
+        term.assert_awaited_with(kill=True)
 
     # ensure underlying wait coroutine restored and awaited for cleanup
     lp._process.wait = orig_wait
