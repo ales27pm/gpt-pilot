@@ -20,7 +20,7 @@ def _async_to_sync_db_scheme(url: str) -> str:
     :return: Synchronous database URL.
     """
     if url.startswith("postgresql+asyncpg://"):
-        return url.replace("postgresql+asyncpg://", "postgresql://")
+        return url.replace("postgresql+asyncpg://", "postgresql+psycopg://")
     return url
 
 

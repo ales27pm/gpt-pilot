@@ -59,9 +59,7 @@ class VirtualUI(UIBase):
         app_name: Optional[str] = None,
         folder_name: Optional[str] = None,
     ):
-        print(
-            f"(app-finished) {app_id or ''} {app_name or ''} {folder_name or ''}".strip()
-        )
+        print(f"(app-finished) {app_id or ''} {app_name or ''} {folder_name or ''}".strip())
 
     async def send_feature_finished(
         self,
@@ -69,9 +67,7 @@ class VirtualUI(UIBase):
         app_name: Optional[str] = None,
         folder_name: Optional[str] = None,
     ):
-        print(
-            f"(feature-finished) {app_id or ''} {app_name or ''} {folder_name or ''}".strip()
-        )
+        print(f"(feature-finished) {app_id or ''} {app_name or ''} {folder_name or ''}".strip())
 
     async def ask_question(
         self,
@@ -182,17 +178,13 @@ class VirtualUI(UIBase):
     async def send_project_stats(self, stats: JSONDict) -> None:
         print(f"(project-stats) {stats}")
 
-    async def send_test_instructions(
-        self, test_instructions: str, project_state_id: Optional[str] = None
-    ):
+    async def send_test_instructions(self, test_instructions: str, project_state_id: Optional[str] = None):
         print(f"(test-instructions) {test_instructions}")
 
     async def knowledge_base_update(self, knowledge_base: JSONDict) -> None:
         print(f"(kb-update) {knowledge_base}")
 
-    async def send_file_status(
-        self, file_path: str, file_status: str, source: Optional[UISource] = None
-    ) -> None:
+    async def send_file_status(self, file_path: str, file_status: str, source: Optional[UISource] = None) -> None:
         print(f"(file-status) {file_status} {file_path}")
 
     async def send_bug_hunter_status(self, status: str, num_cycles: int):
