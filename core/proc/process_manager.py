@@ -100,7 +100,7 @@ class LocalProcess:
             log.debug("Process %s wait was cancelled; terminating", self.cmd)
             await self.terminate(kill=True)
             raise
-        except Exception as exc:
+        except BaseException as exc:
             log.debug("Process %s raised %s while waiting; terminating", self.cmd, exc)
             await self.terminate(kill=True)
             raise
