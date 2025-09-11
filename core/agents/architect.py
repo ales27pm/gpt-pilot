@@ -219,6 +219,7 @@ class Architect(BaseAgent):
             if response:
                 return response
 
+        # Offer cancel path to revise specification when unsupported frameworks are present
         if warn_frameworks:
             answer = await self.ask_question(
                 f"Pythagora doesn't support {', '.join(warn_frameworks)}. Continue anyway? "
@@ -230,7 +231,7 @@ class Architect(BaseAgent):
             if getattr(answer, "button", None) == "cancel":
                 return AgentResponse.update_specification(
                     self,
-                    description=f"Unsupported frameworks: {', '.join(warn_frameworks)}",
+                    description=f"User cancelled; unsupported frameworks: {', '.join(warn_frameworks)}. Please reword specification.",
                 )
 
         return None
