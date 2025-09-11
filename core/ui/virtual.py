@@ -15,6 +15,10 @@ class VirtualUI(UIBase):
 
     def __init__(self, inputs: list[dict[str, str]]):
         self.virtual_inputs = [UserInput(**input) for input in inputs]
+        self._app_link: Optional[str] = None
+        self._streaming_logs = False
+        self._important_stream_open = False
+        self._breakdown_stream_open = False
 
     async def start(self) -> bool:
         log.debug("Starting test UI")
@@ -46,7 +50,8 @@ class VirtualUI(UIBase):
             print(message)
 
     async def send_key_expired(self, message: Optional[str] = None):
-        pass
+        if message:
+            print(f"(key-expired) {message}")
 
     async def send_app_finished(
         self,
@@ -54,7 +59,9 @@ class VirtualUI(UIBase):
         app_name: Optional[str] = None,
         folder_name: Optional[str] = None,
     ):
-        pass
+        print(
+            f"(app-finished) {app_id or ''} {app_name or ''} {folder_name or ''}".strip()
+        )
 
     async def send_feature_finished(
         self,
@@ -62,7 +69,9 @@ class VirtualUI(UIBase):
         app_name: Optional[str] = None,
         folder_name: Optional[str] = None,
     ):
-        pass
+        print(
+            f"(feature-finished) {app_id or ''} {app_name or ''} {folder_name or ''}".strip()
+        )
 
     async def ask_question(
         self,
@@ -150,37 +159,44 @@ class VirtualUI(UIBase):
         pass
 
     async def send_run_command(self, run_command: str):
-        pass
+        print(f"(run) {run_command}")
 
     async def send_app_link(self, app_link: str):
-        pass
+        self._app_link = app_link
+        print(f"(app-link) {app_link}")
 
     async def open_editor(self, file: str, line: Optional[int] = None):
-        pass
+        print(f"(open-editor) {file}:{line if line is not None else ''}")
 
     async def send_project_root(self, path: str):
-        pass
+        print(f"(project-root) {path}")
 
     async def start_important_stream(self):
-        pass
+        self._important_stream_open = True
+        print("(stream-important:start)")
 
     async def start_breakdown_stream(self):
-        pass
+        self._breakdown_stream_open = True
+        print("(stream-breakdown:start)")
 
     async def send_project_stats(self, stats: JSONDict) -> None:
-        pass
+        print(f"(project-stats) {stats}")
 
-    async def send_test_instructions(self, test_instructions: str, project_state_id: Optional[str] = None):
-        pass
+    async def send_test_instructions(
+        self, test_instructions: str, project_state_id: Optional[str] = None
+    ):
+        print(f"(test-instructions) {test_instructions}")
 
     async def knowledge_base_update(self, knowledge_base: JSONDict) -> None:
-        pass
+        print(f"(kb-update) {knowledge_base}")
 
-    async def send_file_status(self, file_path: str, file_status: str, source: Optional[UISource] = None) -> None:
-        pass
+    async def send_file_status(
+        self, file_path: str, file_status: str, source: Optional[UISource] = None
+    ) -> None:
+        print(f"(file-status) {file_status} {file_path}")
 
     async def send_bug_hunter_status(self, status: str, num_cycles: int):
-        pass
+        print(f"(bug-hunter) {status} cycles={num_cycles}")
 
     async def generate_diff(
         self,
@@ -191,25 +207,27 @@ class VirtualUI(UIBase):
         n_del_lines: int = 0,
         source: Optional[UISource] = None,
     ):
-        pass
+        print(f"(diff-open) {file_path}")
 
     async def stop_app(self):
-        pass
+        print("(app-stop)")
 
     async def close_diff(self):
-        pass
+        print("(diff-close)")
 
     async def loading_finished(self):
-        pass
+        print("(loading-finished)")
 
     async def send_project_description(self, description: str):
-        pass
+        print(f"(project-description) {description}")
 
     async def send_features_list(self, features: list[str]):
-        pass
+        print("(features-list)")
+        for f in features:
+            print(f"  - {f}")
 
     async def import_project(self, project_dir: str):
-        pass
+        print(f"(import-project) {project_dir}")
 
 
 __all__ = ["VirtualUI"]
