@@ -16,7 +16,6 @@ class VirtualUI(UIBase):
     def __init__(self, inputs: list[dict[str, str]]):
         self.virtual_inputs = [UserInput(**input) for input in inputs]
         self._app_link = None
-        self._streaming_logs = False
         self._important_stream_open = False
         self._breakdown_stream_open = False
 
