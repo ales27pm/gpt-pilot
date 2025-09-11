@@ -8,10 +8,11 @@ from core.config import LocalIPCConfig
 from core.ui.base import AgentSource, UIClosedError
 from core.ui.ipc_client import IPCClientUI
 
-pytestmark = pytest.mark.skipif(
-    sys.platform == "win32",
-    reason="Skipping IPC Client tests on Windows due to mock server timeouts",
-)
+if sys.platform == "win32":
+    pytest.skip(
+        "Skipping IPC Client tests on Windows due to mock server timeouts",
+        allow_module_level=True,
+    )
 
 
 class IPCServer:
