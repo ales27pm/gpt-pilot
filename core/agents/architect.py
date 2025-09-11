@@ -204,7 +204,7 @@ class Architect(BaseAgent):
             for dep in arch.system_dependencies or []
             if getattr(dep, "name", None) and dep.name.lower() in WARN_SYSTEM_DEPS
         ]
-        warn_package_deps = [
+        warn_frameworks = [
             dep.name
             for dep in arch.package_dependencies or []
             if getattr(dep, "name", None) and dep.name.lower() in WARN_FRAMEWORKS
@@ -218,14 +218,18 @@ class Architect(BaseAgent):
             if response:
                 return response
 
-        if warn_package_deps:
-            response = await self._confirm_continue(
-                f"Warning: Pythagora works best with vanilla JavaScript. "
-                f"You can try try to use {', '.join(warn_package_deps)}, but you may run into problems. "
-                f"Visit {WARN_FRAMEWORKS_URL} for more information."
+        if warn_frameworks:
+            answer = await self.ask_question(
+                f"Pythagora doesn't support {', '.join(warn_frameworks)}. Continue anyway? "
+                f"Visit {WARN_FRAMEWORKS_URL} for more information.",
+                buttons={"continue": "Continue", "cancel": "Cancel"},
+                buttons_only=True,
+                default="continue",
             )
-            if response:
-                return response
+            if getattr(answer, "button", None) == "cancel":
+                return AgentResponse.update_specification(
+                    self, description="User cancelled; please reword specification."
+                )
 
         return None
 

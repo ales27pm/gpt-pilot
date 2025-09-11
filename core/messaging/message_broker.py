@@ -7,6 +7,9 @@ from typing import Any, DefaultDict
 from core.log import get_logger
 
 
+PUBLISH_PUT_TIMEOUT = 0.5  # seconds
+
+
 class MessageBroker:
     """A simple asynchronous message broker.
 
@@ -17,8 +20,9 @@ class MessageBroker:
     unavailable. Subscribers can be removed with :meth:`unsubscribe`.
     """
 
-    def __init__(self, maxsize: int = 1000) -> None:
+    def __init__(self, maxsize: int = 1000, publish_put_timeout: float = PUBLISH_PUT_TIMEOUT) -> None:
         self._maxsize = maxsize
+        self._publish_put_timeout = publish_put_timeout
         self._queues: DefaultDict[str, list[asyncio.Queue[Any]]] = defaultdict(list)
         self._logger = get_logger(__name__)
 
@@ -26,7 +30,7 @@ class MessageBroker:
         """Publish ``message`` to all subscribers of ``topic``."""
         for queue in self._queues[topic]:
             try:
-                await asyncio.wait_for(queue.put(message), timeout=0.5)
+                await asyncio.wait_for(queue.put(message), timeout=self._publish_put_timeout)
             except asyncio.TimeoutError:
                 self._logger.warning("dropping message on topic %s: slow consumer", topic)
 
