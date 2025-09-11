@@ -139,7 +139,6 @@ class Orchestrator(BaseAgent, GitMixin):
                 log.exception(
                     "Agent %s failed during parallel execution",
                     single_agent.agent_type,
-                    exc_info=single_response,
                 )
                 single_response = AgentResponse.error(single_agent, str(single_response))
             responses.append(single_response)
