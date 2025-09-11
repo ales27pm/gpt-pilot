@@ -64,6 +64,18 @@ Edit `config.json` to adjust timeouts or add new providers.
 launches the development server. Generated apps are placed under
 `workspace/<app-name>`.
 
+## Docker
+
+You can also run GPT Pilot inside Docker using the provided
+`docker-compose.yml`:
+
+```bash
+docker compose up --build
+```
+
+This builds the image defined in `Dockerfile` and exposes the HTTP API on
+port 8000.
+
 ## CLI options
 
 - `python main.py --list` – list existing projects
