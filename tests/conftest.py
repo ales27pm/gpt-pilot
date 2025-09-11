@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import pytest_asyncio
+from testcontainers.postgres import PostgresContainer
 
 from core.config import DBConfig
 from core.db.models import Base
@@ -16,20 +17,30 @@ def disable_test_telemetry(monkeypatch):
     os.environ["DISABLE_TELEMETRY"] = "1"
 
 
-@pytest_asyncio.fixture
-async def testmanager():
-    """
-    Set up a temporary in-memory database for testing.
-
-    This fixture is an async context manager.
-    """
-    db_cfg = DBConfig(url="postgresql+asyncpg://postgres:postgres@localhost:5432/test")
-    manager = SessionManager(db_cfg)
+@pytest.fixture(scope="session")
+def postgres_container():
     try:
-        async with manager.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+        container = (
+            PostgresContainer("pgvector/pgvector:pg16")
+            .with_database("test")
+            .with_username("postgres")
+            .with_password("postgres")
+        )
+        container.start()
     except Exception:
         pytest.skip("PostgreSQL not available")
+    yield container
+    container.stop()
+
+
+@pytest_asyncio.fixture
+async def testmanager(postgres_container):
+    """Set up a temporary PostgreSQL database for testing."""
+    db_url = postgres_container.get_connection_url().replace("postgresql://", "postgresql+asyncpg://")
+    db_cfg = DBConfig(url=db_url)
+    manager = SessionManager(db_cfg)
+    async with manager.engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
     yield manager
 

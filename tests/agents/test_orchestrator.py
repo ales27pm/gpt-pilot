@@ -10,6 +10,7 @@ from core.agents.orchestrator import Orchestrator
 async def test_offline_changes_check_restores_if_workspace_empty():
     sm = AsyncMock()
     sm.workspace_is_empty = Mock(return_value=True)
+    sm.get_modified_files_with_content = AsyncMock(return_value=[])
     ui = AsyncMock()
     orca = Orchestrator(state_manager=sm, ui=ui)
     await orca.offline_changes_check()
@@ -22,6 +23,7 @@ async def test_offline_changes_check_imports_changes_from_disk():
     sm = AsyncMock()
     sm.workspace_is_empty = Mock(return_value=True)
     sm.import_files = AsyncMock(return_value=([], []))
+    sm.get_modified_files_with_content = AsyncMock(return_value=["foo.txt"])
     ui = AsyncMock()
     ui.ask_question.return_value.button = "yes"
     orca = Orchestrator(state_manager=sm, ui=ui)
@@ -35,6 +37,7 @@ async def test_offline_changes_check_imports_changes_from_disk():
 async def test_offline_changes_check_restores_changes_from_db():
     sm = AsyncMock()
     sm.workspace_is_empty = Mock(return_value=True)
+    sm.get_modified_files_with_content = AsyncMock(return_value=[])
     ui = AsyncMock()
     ui.ask_question.return_value.button = "no"
     orca = Orchestrator(state_manager=sm, ui=ui)
@@ -102,6 +105,7 @@ async def test_import_if_deleted_files(agentcontext):
 
     assert len(sm.current_state.files) == 0
 
+
 @pytest.mark.asyncio
 async def test_offline_changes_check_defaults_to_restore_on_unexpected_ui_response():
     # Framework: pytest + pytest-asyncio
@@ -117,6 +121,7 @@ async def test_offline_changes_check_defaults_to_restore_on_unexpected_ui_respon
     ui.ask_question.assert_called_once()
     sm.import_files.assert_not_called()
     sm.restore_files.assert_called_once()
+
 
 @pytest.mark.asyncio
 async def test_import_files_no_changes_keeps_state(agentcontext):
@@ -135,6 +140,7 @@ async def test_import_files_no_changes_keeps_state(agentcontext):
 
     # Expect no new commit/state if import detects no changes
     assert sm.current_state == baseline
+
 
 @pytest.mark.asyncio
 async def test_import_files_reports_conflicts(agentcontext):
@@ -162,6 +168,7 @@ async def test_import_files_reports_conflicts(agentcontext):
     # If not present, at least ensure import_files was attempted.
     sm.import_files.assert_called_once()
 
+
 @pytest.mark.asyncio
 async def test_offline_changes_check_asks_and_imports_when_user_confirms(agentcontext):
     # Framework: pytest + pytest-asyncio
@@ -178,4 +185,3 @@ async def test_offline_changes_check_asks_and_imports_when_user_confirms(agentco
     ui.ask_question.assert_called_once()
     sm.import_files.assert_called_once()
     sm.restore_files.assert_not_called()
-
