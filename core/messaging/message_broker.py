@@ -6,7 +6,6 @@ from typing import Any, DefaultDict
 
 from core.log import get_logger
 
-
 PUBLISH_PUT_TIMEOUT = 0.5  # seconds
 
 
