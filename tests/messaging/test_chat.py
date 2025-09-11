@@ -1,6 +1,9 @@
 import asyncio
+
 import pytest
+
 from core.messaging import Chat, MessageBroker
+
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
@@ -48,17 +51,10 @@ async def test_chat_get_nowait_multiple_messages():
     assert await chat.get_nowait() == "two"
     assert await chat.get_nowait() is None
 
+
 # ---------------------------------------------------------------------------
-# Additional tests appended by PR assistant to broaden coverage
-# Testing framework: pytest + pytest-asyncio (consistent with existing tests)
+# Additional tests to broaden coverage
 # ---------------------------------------------------------------------------
-
-import asyncio
-import pytest
-
-from core.messaging import Chat, MessageBroker
-
-
 @pytest.mark.asyncio
 async def test_chat_preserves_message_ordering_fifo():
     broker = MessageBroker()
