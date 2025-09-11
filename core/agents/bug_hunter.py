@@ -2,7 +2,7 @@ import copy
 import json
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from core.agents.base import BaseAgent
 from core.agents.convo import AgentConvo
@@ -24,12 +24,19 @@ class HuntConclusionType(str, Enum):
 
 
 class HuntConclusionOptions(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     conclusion: HuntConclusionType = Field(
-        description=f"If more logs are needed to identify the problem, respond with '{magic_words.ADD_LOGS}'. If the problem is identified, respond with '{magic_words.PROBLEM_IDENTIFIED}'."
+        description=(
+            f"If more logs are needed to identify the problem, respond with '{magic_words.ADD_LOGS}'. "
+            f"If the problem is identified, respond with '{magic_words.PROBLEM_IDENTIFIED}'."
+        )
     )
 
 
 class ImportantLog(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     logCode: str = Field(description="Actual line of code that prints the log.")
     shouldBeDifferent: bool = Field(
         description="Whether the current output should be different from the expected output."
@@ -41,6 +48,8 @@ class ImportantLog(BaseModel):
 
 
 class ImportantLogsForDebugging(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     logs: list[ImportantLog] = Field(description="Important logs that will help the human debug the current bug.")
 
 

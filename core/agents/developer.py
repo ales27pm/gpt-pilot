@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Annotated, Literal, Union
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from core.agents.base import BaseAgent
 from core.agents.convo import AgentConvo
@@ -28,32 +28,44 @@ class StepType(str, Enum):
 
 
 class CommandOptions(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     command: str = Field(description="Command to run")
     timeout: int = Field(description="Timeout in seconds")
     success_message: str = ""
 
 
 class SaveFileOptions(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     path: str
 
 
 class SaveFileStep(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     type: Literal[StepType.SAVE_FILE] = StepType.SAVE_FILE
     save_file: SaveFileOptions
     related_api_endpoints: list[str] = Field(description="API endpoints that are implemented in this file", default=[])
 
 
 class CommandStep(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     type: Literal[StepType.COMMAND] = StepType.COMMAND
     command: CommandOptions
 
 
 class HumanInterventionStep(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     type: Literal[StepType.HUMAN_INTERVENTION] = StepType.HUMAN_INTERVENTION
     human_intervention_description: str
 
 
 class UtilityFunction(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     type: Literal[StepType.UTILITY_FUNCTION] = StepType.UTILITY_FUNCTION
     file: str
     function_name: str
@@ -70,6 +82,8 @@ Step = Annotated[
 
 
 class TaskSteps(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     steps: list[Step]
 
 

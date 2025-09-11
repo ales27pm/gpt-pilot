@@ -3,7 +3,7 @@ from difflib import unified_diff
 from enum import Enum
 from typing import Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictStr
 
 from core.agents.base import BaseAgent
 from core.agents.convo import AgentConvo
@@ -37,21 +37,29 @@ class Decision(str, Enum):
 
 
 class Hunk(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     number: int = Field(description="Index of the hunk in the diff. Starts from 1.")
-    reason: str = Field(description="Reason for applying or ignoring this hunk, or for asking for it to be reworked.")
+    reason: StrictStr = Field(
+        description="Reason for applying or ignoring this hunk, or for asking for it to be reworked."
+    )
     decision: Decision = Field(description="Whether to apply this hunk, rework, or ignore it.")
 
 
 class ReviewChanges(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     hunks: list[Hunk]
-    review_notes: str = Field(description="Additional review notes (optional, can be empty).")
+    review_notes: StrictStr = Field(description="Additional review notes (optional, can be empty).")
 
 
 class FileDescription(BaseModel):
-    summary: str = Field(
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    summary: StrictStr = Field(
         description="Detailed description summarized what the file is about, and what the major classes, functions, elements or other functionality is implemented."
     )
-    references: list[str] = Field(
+    references: list[StrictStr] = Field(
         description="List of references the file imports or includes (only files local to the project), where each element specifies the project-relative path of the referenced file, including the file extension."
     )
 

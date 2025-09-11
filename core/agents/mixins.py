@@ -2,7 +2,7 @@ import json
 from difflib import unified_diff
 from typing import List, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from core.agents.convo import AgentConvo
 from core.agents.response import AgentResponse
@@ -15,38 +15,52 @@ log = get_logger(__name__)
 
 
 class ReadFilesAction(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     read_files: Optional[List[str]] = Field(
         description="List of files you want to read. All listed files must be in the project."
     )
 
 
 class AddFilesAction(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     add_files: Optional[List[str]] = Field(
         description="List of files you want to add to the list of relevant files. All listed files must be in the project. You must read files before adding them."
     )
 
 
 class RemoveFilesAction(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     remove_files: Optional[List[str]] = Field(
         description="List of files you want to remove from the list of relevant files. All listed files must be in the relevant files list."
     )
 
 
 class DoneBooleanAction(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     done: Optional[bool] = Field(description="Boolean flag to indicate that you are done creating breakdown.")
 
 
 class RelevantFiles(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     action: Union[ReadFilesAction, AddFilesAction, RemoveFilesAction, DoneBooleanAction]
 
 
 class Test(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     title: str = Field(description="Very short title of the test.")
     action: str = Field(description="More detailed description of what actions have to be taken to test the app.")
     result: str = Field(description="Expected result that verifies successful test.")
 
 
 class TestSteps(BaseModel):
+    model_config = ConfigDict(strict=True, extra="forbid")
+
     steps: List[Test]
 
 

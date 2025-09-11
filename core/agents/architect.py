@@ -213,7 +213,8 @@ class Architect(BaseAgent):
         if warn_system_deps:
             response = await self._confirm_continue(
                 f"Warning: Pythagora doesn't officially support {', '.join(warn_system_deps)}. "
-                f"You can try to use {'it' if len(warn_system_deps) == 1 else 'them'}, but you may run into problems."
+                f"You can try to use {'it' if len(warn_system_deps) == 1 else 'them'}, but you may run into problems.",
+                reason=f"Unsupported system dependencies: {', '.join(warn_system_deps)}",
             )
             if response:
                 return response
@@ -228,12 +229,13 @@ class Architect(BaseAgent):
             )
             if getattr(answer, "button", None) == "cancel":
                 return AgentResponse.update_specification(
-                    self, description="User cancelled; please reword specification."
+                    self,
+                    description=f"Unsupported frameworks: {', '.join(warn_frameworks)}",
                 )
 
         return None
 
-    async def _confirm_continue(self, message: str) -> Optional[AgentResponse]:
+    async def _confirm_continue(self, message: str, reason: str) -> Optional[AgentResponse]:
         answer = await self.ask_question(
             message,
             buttons={"continue": "Continue", "cancel": "Cancel"},
@@ -241,7 +243,7 @@ class Architect(BaseAgent):
             default="continue",
         )
         if answer.button == "cancel":
-            return AgentResponse.update_specification(self, description="User cancelled; please reword specification.")
+            return AgentResponse.update_specification(self, description=reason)
         return None
 
     def prepare_example_project(self, spec: Specification):

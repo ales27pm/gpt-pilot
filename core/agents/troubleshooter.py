@@ -2,7 +2,7 @@ import json
 from typing import Optional
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictStr
 
 from core.agents.base import BaseAgent
 from core.agents.convo import AgentConvo
@@ -22,13 +22,17 @@ LOOP_THRESHOLD = 3  # number of iterations in task to be considered a loop
 
 
 class BugReportQuestions(BaseModel):
-    missing_data: list[str] = Field(
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    missing_data: list[StrictStr] = Field(
         description="Very clear question that needs to be answered to have good bug report."
     )
 
 
 class RouteFilePaths(BaseModel):
-    files: list[str] = Field(description="List of paths for files that contain routes")
+    model_config = ConfigDict(strict=True, extra="forbid")
+
+    files: list[StrictStr] = Field(description="List of paths for files that contain routes")
 
 
 class Troubleshooter(ChatWithBreakdownMixin, IterationPromptMixin, RelevantFilesMixin, BaseAgent):
