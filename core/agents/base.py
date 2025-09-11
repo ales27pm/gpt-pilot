@@ -10,7 +10,7 @@ from core.state.state_manager import StateManager
 from core.ui.base import AgentSource, UIBase, UserInput, pythagora_source
 
 if TYPE_CHECKING:  # pragma: no cover - only for type checkers
-    from core.messaging import MessageBroker
+    from core.messaging import Chat, MessageBroker
 
 log = get_logger(__name__)
 
@@ -47,6 +47,7 @@ class BaseAgent:
         self.args = args
         self.memory = state_manager.shared_memory
         self.message_broker: Optional["MessageBroker"] = None
+        self.chat: Optional["Chat"] = None
 
     @property
     def current_state(self) -> ProjectState:
