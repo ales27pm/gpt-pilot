@@ -92,10 +92,18 @@ class LocalProcess:
                         self.cmd,
                     )
                     retcode = -1
-        except BaseException as exc:
-            log.debug("Process %s raised %s while waiting; terminating", self.cmd, exc)
+        except SystemExit:
+            log.debug("Process %s raised SystemExit while waiting; terminating", self.cmd)
             await self.terminate(kill=True)
             retcode = -1
+        except asyncio.CancelledError:
+            log.debug("Process %s wait was cancelled; terminating", self.cmd)
+            await self.terminate(kill=True)
+            raise
+        except Exception as exc:
+            log.debug("Process %s raised %s while waiting; terminating", self.cmd, exc)
+            await self.terminate(kill=True)
+            raise
 
         return retcode
 
@@ -321,7 +329,7 @@ class ProcessManager:
 
         process = self.processes[process_id]
         # Ensure the process tree exits before removing it from tracking.
-        await process.wait(0)
+        await process.wait(0.5)
         del self.processes[process_id]
 
         return (process.stdout, process.stderr)
