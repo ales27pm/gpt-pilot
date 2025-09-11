@@ -81,20 +81,15 @@ async def test_local_process_wait_handles_unresponsive_process(tmp_path):
         kill_wait_timeout=0.1,
     )
 
-    orig_wait = lp._process.wait
-
     async def never_exit():
         await asyncio.sleep(10)
 
-    lp._process.wait = AsyncMock(side_effect=never_exit)
+    with patch.object(lp._process, "wait", AsyncMock(side_effect=never_exit)):
+        with patch.object(LocalProcess, "terminate", AsyncMock(wraps=lp.terminate)) as term:
+            ret = await lp.wait(0.1)
+            assert ret == -1
+            term.assert_awaited()
 
-    with patch.object(LocalProcess, "terminate", AsyncMock(wraps=lp.terminate)) as term:
-        ret = await lp.wait(0.1)
-        assert ret == -1
-        term.assert_awaited()
-
-    # ensure underlying wait coroutine restored and awaited for cleanup
-    lp._process.wait = orig_wait
     await lp._process.wait()
 
 
@@ -110,20 +105,15 @@ async def test_local_process_wait_handles_system_exit(tmp_path):
         kill_wait_timeout=0.1,
     )
 
-    orig_wait = lp._process.wait
-
     async def raise_system_exit():
         raise SystemExit
 
-    lp._process.wait = AsyncMock(side_effect=raise_system_exit)
+    with patch.object(lp._process, "wait", AsyncMock(side_effect=raise_system_exit)):
+        with patch.object(LocalProcess, "terminate", AsyncMock(wraps=lp.terminate)) as term:
+            ret = await lp.wait(0.1)
+            assert ret == -1
+            term.assert_awaited()
 
-    with patch.object(LocalProcess, "terminate", AsyncMock(wraps=lp.terminate)) as term:
-        ret = await lp.wait(0.1)
-        assert ret == -1
-        term.assert_awaited()
-
-    # ensure underlying wait coroutine restored and awaited for cleanup
-    lp._process.wait = orig_wait
     await lp._process.wait()
 
 
