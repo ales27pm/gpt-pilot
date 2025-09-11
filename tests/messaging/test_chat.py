@@ -1,7 +1,6 @@
+import asyncio
 import pytest
-
 from core.messaging import Chat, MessageBroker
-
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
