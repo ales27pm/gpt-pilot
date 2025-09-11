@@ -80,18 +80,12 @@ class LocalProcess:
             # Try graceful termination first
             await self.terminate(kill=False)
             try:
-                retcode = await asyncio.wait_for(
-                    self._process.wait(), self.kill_wait_timeout
-                )
+                retcode = await asyncio.wait_for(self._process.wait(), self.kill_wait_timeout)
             except asyncio.TimeoutError:
-                log.debug(
-                    "Process %s ignored SIGTERM; sending SIGKILL", self.cmd
-                )
+                log.debug("Process %s ignored SIGTERM; sending SIGKILL", self.cmd)
                 await self.terminate(kill=True)
                 try:
-                    retcode = await asyncio.wait_for(
-                        self._process.wait(), self.kill_wait_timeout
-                    )
+                    retcode = await asyncio.wait_for(self._process.wait(), self.kill_wait_timeout)
                 except asyncio.TimeoutError:
                     log.warning(
                         "Process %s did not exit after SIGKILL; forcing return code -1",
@@ -99,9 +93,7 @@ class LocalProcess:
                     )
                     retcode = -1
         except SystemExit:
-            log.debug(
-                "Process %s raised SystemExit while waiting; terminating", self.cmd
-            )
+            log.debug("Process %s raised SystemExit while waiting; terminating", self.cmd)
             await self.terminate(kill=True)
             retcode = -1
 
