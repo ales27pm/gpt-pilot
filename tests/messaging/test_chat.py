@@ -51,6 +51,7 @@ async def test_chat_get_nowait_multiple_messages():
     assert await chat.get_nowait() == "two"
     assert await chat.get_nowait() is None
 
+
 # ---------------------------------------------------------------------------
 # Additional tests to broaden coverage
 # ---------------------------------------------------------------------------
