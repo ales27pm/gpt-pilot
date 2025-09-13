@@ -108,7 +108,7 @@ async def test_local_process_wait_handles_system_exit(tmp_path):
     async def raise_system_exit():
         raise SystemExit
 
-    with patch.object(lp._process, "wait", AsyncMock(side_effect=raise_system_exit)):
+    with patch.object(lp._process, "wait", new=raise_system_exit):
         with patch.object(LocalProcess, "terminate", AsyncMock(wraps=lp.terminate)) as term:
             ret = await lp.wait(0.1)
             assert ret == -1
