@@ -110,7 +110,7 @@ async def test_local_process_wait_handles_system_exit(tmp_path):
     async def raise_system_exit():
         raise SystemExit
 
-    lp._process.wait = AsyncMock(side_effect=raise_system_exit)
+    lp._process.wait = raise_system_exit
 
     with patch.object(LocalProcess, "terminate", AsyncMock(wraps=lp.terminate)) as term:
         ret = await lp.wait(0.1)
@@ -178,6 +178,8 @@ async def test_process_manager_start_list_terminate(tmp_path):
 
     await pm.terminate_process(lp.id)
 
+    # ensure underlying subprocess fully exits before assertions
+    await lp._process.wait()
     await pm.stop_watcher()
 
     assert p.is_running() is False
