@@ -57,6 +57,9 @@ testcontainers = "^4.13.0"
 [tool.pytest.ini_options]
 addopts = "-ra -q --cov=core --no-cov-on-fail --timeout 10"
 pythonpath = ["."]
+filterwarnings = [
+    "ignore:The @wait_container_is_ready decorator is deprecated and will be removed in a future version.*:DeprecationWarning:testcontainers.*",
+]
 
 [tool.coverage.report]
 exclude_lines = ["if TYPE_CHECKING:", "raise NotImplementedError()"]
