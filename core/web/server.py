@@ -17,8 +17,10 @@ ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 FRONTEND_DIR = ROOT_DIR / "frontend"
 FRONTEND_DIST = FRONTEND_DIR / "dist"
 FRONTEND_INDEX = FRONTEND_DIST / "index.html"
-if FRONTEND_INDEX.exists():
-    app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
+if FRONTEND_INDEX.is_file():
+    assets_dir = FRONTEND_DIST / "assets"
+    if assets_dir.is_dir():
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
 db_config: Optional[DBConfig] = None
 
@@ -76,9 +78,15 @@ async def delete_project(project_id: UUID):
 
 @app.get("/")
 def index():
-    if FRONTEND_INDEX.exists():
+    if FRONTEND_INDEX.is_file():
         return FileResponse(FRONTEND_INDEX)
-    return HTMLResponse("<h1>GPT Pilot API</h1><p>Frontend build not found.</p>")
+    placeholder = (
+        "<h1>GPT Pilot API</h1>"
+        "<p>Frontend build not found. Run <code>npm run build</code> inside the "
+        "<code>frontend/</code> directory and rebuild the image.</p>"
+        '<p>API docs available at <a href="/docs">/docs</a>.</p>'
+    )
+    return HTMLResponse(placeholder)
 
 
 if __name__ == "__main__":
