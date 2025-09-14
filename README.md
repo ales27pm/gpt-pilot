@@ -14,7 +14,7 @@ as a standalone command‑line tool.
 - Supports multiple LLM providers (OpenAI, Anthropic, Groq, Azure and
   compatible APIs).
 - State stored in PostgreSQL with pgvector extension for semantic context retrieval.
-- Optional web frontend started alongside the backend.
+- Optional React + Vite web frontend started alongside the backend.
 
 ## Agent Principles
 
