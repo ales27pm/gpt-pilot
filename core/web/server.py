@@ -15,7 +15,9 @@ app = FastAPI(title="GPT Pilot Web")
 
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 FRONTEND_DIR = ROOT_DIR / "frontend"
-app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+FRONTEND_DIST = FRONTEND_DIR / "dist"
+if FRONTEND_DIST.exists():
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
 
 db_config: Optional[DBConfig] = None
 
@@ -73,7 +75,7 @@ async def delete_project(project_id: UUID):
 
 @app.get("/")
 def index() -> FileResponse:
-    return FileResponse(FRONTEND_DIR / "index.html")
+    return FileResponse(FRONTEND_DIST / "index.html")
 
 
 if __name__ == "__main__":

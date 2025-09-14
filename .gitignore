@@ -5,6 +5,8 @@ venv/
 .idea/
 htmlcov/
 dist/
+frontend/dist/
+frontend/node_modules/
 workspace/
 pilot-env/
 venv/
