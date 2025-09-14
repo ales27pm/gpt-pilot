@@ -80,13 +80,12 @@ async def delete_project(project_id: UUID):
 def index():
     if FRONTEND_INDEX.is_file():
         return FileResponse(FRONTEND_INDEX)
-    placeholder = (
+    return HTMLResponse(
         "<h1>GPT Pilot API</h1>"
         "<p>Frontend build not found. Run <code>npm run build</code> inside the "
         "<code>frontend/</code> directory and rebuild the image.</p>"
         '<p>API docs available at <a href="/docs">/docs</a>.</p>'
     )
-    return HTMLResponse(placeholder)
 
 
 if __name__ == "__main__":
