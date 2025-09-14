@@ -3,7 +3,7 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from core.config import DBConfig, get_config
@@ -74,8 +74,10 @@ async def delete_project(project_id: UUID):
 
 
 @app.get("/")
-def index() -> FileResponse:
-    return FileResponse(FRONTEND_DIST / "index.html")
+def index():
+    if FRONTEND_DIST.exists():
+        return FileResponse(FRONTEND_DIST / "index.html")
+    return HTMLResponse("<h1>GPT Pilot API</h1>")
 
 
 if __name__ == "__main__":
