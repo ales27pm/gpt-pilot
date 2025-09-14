@@ -3,7 +3,7 @@ from typing import Optional
 from uuid import UUID
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from core.config import DBConfig, get_config
@@ -16,7 +16,8 @@ app = FastAPI(title="GPT Pilot Web")
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 FRONTEND_DIR = ROOT_DIR / "frontend"
 FRONTEND_DIST = FRONTEND_DIR / "dist"
-if FRONTEND_DIST.exists():
+FRONTEND_INDEX = FRONTEND_DIST / "index.html"
+if FRONTEND_INDEX.exists():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
 
 db_config: Optional[DBConfig] = None
@@ -74,8 +75,10 @@ async def delete_project(project_id: UUID):
 
 
 @app.get("/")
-def index() -> FileResponse:
-    return FileResponse(FRONTEND_DIST / "index.html")
+def index():
+    if FRONTEND_INDEX.exists():
+        return FileResponse(FRONTEND_INDEX)
+    return HTMLResponse("<h1>GPT Pilot API</h1><p>Frontend build not found.</p>")
 
 
 if __name__ == "__main__":
