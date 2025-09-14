@@ -108,6 +108,14 @@ def test_default_config():
     assert config.log.level == "DEBUG"
 
 
+def test_database_url_env_override(monkeypatch):
+    loader.config = Config()
+    monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@db/test_db")
+
+    config = get_config()
+    assert config.db.url == "postgresql+asyncpg://postgres:postgres@db/test_db"
+
+
 @pytest.mark.parametrize(
     ("encoding", "bom"),
     [

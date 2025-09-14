@@ -1,4 +1,5 @@
 from enum import Enum
+from os import getenv
 from os.path import abspath, dirname, isdir, join
 from typing import Any, Literal, Optional, Union
 
@@ -516,7 +517,12 @@ def get_config() -> Config:
 
     :return: Current configuration object.
     """
-    return adapt_for_bedrock(loader.config)
+    config = adapt_for_bedrock(loader.config)
+
+    if db_url := getenv("DATABASE_URL"):
+        config.db.url = db_url
+
+    return config
 
 
 __all__ = ["loader", "get_config"]
