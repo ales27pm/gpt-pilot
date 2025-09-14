@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from core.config import get_config
+from core.config import DBConfig, get_config
 from core.db.session import SessionManager
 from core.db.setup import run_migrations
 from core.state.state_manager import StateManager
@@ -17,20 +17,20 @@ ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 FRONTEND_DIR = ROOT_DIR / "frontend"
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
-db: Optional[SessionManager] = None
+db_config: Optional[DBConfig] = None
 
 
 @app.on_event("startup")
 def startup() -> None:
-    global db
+    global db_config
     config = get_config()
     run_migrations(config.db)
-    db = SessionManager(config.db)
+    db_config = config.db
 
 
 @app.get("/api/projects")
 async def get_projects():
-    sm = StateManager(db)
+    sm = StateManager(SessionManager(db_config))
     projects = await sm.list_projects()
     data = []
     for project in projects:
@@ -55,15 +55,17 @@ async def create_project(payload: dict):
     name = payload.get("name")
     if not name:
         raise HTTPException(status_code=400, detail="Missing project name")
-    sm = StateManager(db)
+    sm = StateManager(SessionManager(db_config))
     project = await sm.create_project(name)
+    await sm.session_manager.close()
     return {"id": project.id.hex, "name": project.name}
 
 
 @app.delete("/api/projects/{project_id}")
 async def delete_project(project_id: UUID):
-    sm = StateManager(db)
+    sm = StateManager(SessionManager(db_config))
     deleted = await sm.delete_project(project_id)
+    await sm.session_manager.close()
     if not deleted:
         raise HTTPException(status_code=404, detail="Project not found")
     return JSONResponse(status_code=204, content=None)
