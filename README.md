@@ -80,7 +80,8 @@ docker compose up --build
 This builds the image defined in `Dockerfile` and exposes the HTTP API on
 port 8000. It also starts a PostgreSQL database with the `pgvector`
 extension on port 5432, which the app connects to via the preconfigured
-`DATABASE_URL`.
+`DATABASE_URL`. A separate `frontend` service builds and serves the React
+UI on port 5173 using Vite.
 
 ## CLI options
 
